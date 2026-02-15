@@ -31,6 +31,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [busy, setBusy] = useState(true);
   const [toast, setToast] = useState<{ kind: "ok" | "bad"; msg: string } | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("nonogram-theme");
     if (saved === "dark" || saved === "light") return saved;
@@ -47,6 +48,15 @@ export default function App() {
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
+
+  useEffect(() => {
+    if (!helpOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setHelpOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [helpOpen]);
 
   useEffect(() => {
     (async () => {
@@ -85,6 +95,9 @@ export default function App() {
           >
             {theme === "light" ? "dark" : "light"}
           </button>
+          <button className="theme-toggle" onClick={() => setHelpOpen(true)}>
+            help
+          </button>
           {user && (
             <>
               <div className="pill">{user.username}</div>
@@ -95,6 +108,45 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {helpOpen && (
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setHelpOpen(false);
+          }}
+        >
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Help">
+            <div className="modal-head">
+              <div className="modal-title">Help</div>
+              <button className="modal-close" onClick={() => setHelpOpen(false)} aria-label="Close help">
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <h3>Controls</h3>
+              <ul>
+                <li>Click to cycle: empty → filled → X → empty</li>
+                <li>Click and drag to paint multiple cells</li>
+                <li>Touch and drag works on mobile</li>
+              </ul>
+              <h3>Rules</h3>
+              <ul>
+                <li>Numbers show runs of filled cells in each row/column</li>
+                <li>Use X to mark cells you know are empty</li>
+                <li>Puzzle auto-submits when solved correctly</li>
+              </ul>
+              <h3>Timer + Leaderboard</h3>
+              <ul>
+                <li>Timer starts on your first move</li>
+                <li>Leaderboard is per puzzle size</li>
+                <li>Viewing a replay disqualifies you for that puzzle</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && <div className={`toast ${toast.kind}`}>{toast.msg}</div>}
 
@@ -140,6 +192,7 @@ function AuthCard(props: {
 }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
@@ -196,7 +249,7 @@ function AuthCard(props: {
       } else {
         const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
         if (siteKey && !captchaToken) throw new Error("Complete captcha first");
-        await Auth.register(username, password, captchaToken);
+        await Auth.register(username, password, captchaToken, inviteCode);
       }
       props.onToast({
         kind: "ok",
@@ -233,6 +286,17 @@ function AuthCard(props: {
         </div>
         {props.mode === "register" && (
           <div className="field">
+            <label>Invite code</label>
+            <input
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              autoComplete="off"
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+            />
+          </div>
+        )}
+        {props.mode === "register" && (
+          <div className="field">
             <label>Captcha</label>
             {(import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
               <>
@@ -263,6 +327,7 @@ function AuthCard(props: {
             className="btn primary"
             disabled={
               submitting ||
+              (props.mode === "register" && inviteCode.trim().length === 0) ||
               (props.mode === "register" &&
                 Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) &&
                 !captchaReady)

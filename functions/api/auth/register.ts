@@ -3,8 +3,9 @@ import { createSession, destroySession } from "../../lib/auth";
 import { err, json, readJson } from "../../lib/http";
 import { hashPassword } from "../../lib/password";
 import { verifyTurnstile } from "../../lib/turnstile";
+import { sha256Hex } from "../../lib/crypto";
 
-type Body = { username: string; password: string; captchaToken?: string };
+type Body = { username: string; password: string; captchaToken?: string; inviteCode?: string };
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const setCookieOld = await destroySession(env, request);
@@ -25,6 +26,38 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
       remoteip
     });
     if (!cap.ok) return err(403, `captcha: ${cap.reason || "failed"}`);
+  }
+
+  // Enforce invite codes by default (friends-only). Set INVITES_REQUIRED=0 to allow open registration.
+  if (env.INVITES_REQUIRED !== "0") {
+    const code = (body.inviteCode || "").trim();
+    if (!code) return err(403, "invite code required");
+
+    const hash = await sha256Hex(code);
+    const nowIso = new Date().toISOString();
+    let found: { id: string } | null = null;
+    try {
+      found = await env.DB.prepare(
+        "SELECT id FROM invite_codes WHERE code_hash_hex = ? AND disabled = 0 AND (expires_at IS NULL OR expires_at > ?)"
+      )
+        .bind(hash, nowIso)
+        .first<{ id: string }>();
+    } catch (e) {
+      const msg = String(e);
+      if (msg.includes("no such table: invite_codes")) {
+        return err(500, "invite codes not migrated. Run D1 migrations.");
+      }
+      throw e;
+    }
+    if (!found) return err(403, "invalid invite code");
+
+    // Atomic-ish consume: guard max_uses inside the update.
+    const upd = await env.DB.prepare(
+      "UPDATE invite_codes SET uses = uses + 1 WHERE id = ? AND disabled = 0 AND (expires_at IS NULL OR expires_at > ?) AND (max_uses IS NULL OR uses < max_uses)"
+    )
+      .bind(found.id, nowIso)
+      .run();
+    if ((upd.meta?.changes || 0) !== 1) return err(403, "invite code exhausted");
   }
 
   const username = (body.username || "").trim().toLowerCase();

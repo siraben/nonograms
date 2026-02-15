@@ -13,11 +13,12 @@ export async function login(username: string, password: string, remember: boolea
 export async function register(
   username: string,
   password: string,
-  captchaToken: string
+  captchaToken: string,
+  inviteCode: string
 ) {
   await api("/api/auth/register", {
     method: "POST",
-    json: { username, password, captchaToken }
+    json: { username, password, captchaToken, inviteCode }
   });
 }
 

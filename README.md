@@ -62,9 +62,48 @@ npx wrangler d1 migrations apply DB
 - Add env vars:
   - `TURNSTILE_SECRET_KEY` (required if you set `VITE_TURNSTILE_SITE_KEY`)
   - `VITE_TURNSTILE_SITE_KEY` (optional; build-time)
+  - `BOOTSTRAP_TOKEN` (secret; used once to make your account admin so you can manage invite codes)
+  - `INVITES_REQUIRED` (optional; default is invite-only. Set to `0` to allow open registration.)
 
 3. Deploy:
 ```sh
 npm run build
 npm run pages:deploy
 ```
+
+## Invite Codes (Friends-Only Signup)
+
+By default, registration requires an invite code.
+
+1. Set `BOOTSTRAP_TOKEN` in Pages env vars (a random string).
+2. Deploy.
+3. Create your account via the Register page (you will need an invite code; see note below).
+4. Promote yourself to admin:
+
+```sh
+curl -sS -X POST 'https://<your-domain>/api/admin/bootstrap' \
+  -H 'content-type: application/json' \
+  -b 'sid=<your session cookie>' \
+  --data '{"token":"<BOOTSTRAP_TOKEN>"}'
+```
+
+Then create invite codes (admin only):
+
+```sh
+# create (returns plaintext code once)
+curl -sS -X POST 'https://<your-domain>/api/admin/invites' \
+  -H 'content-type: application/json' \
+  -b 'sid=<your session cookie>' \
+  --data '{"maxUses":5,"expiresInDays":30}'
+
+# list
+curl -sS 'https://<your-domain>/api/admin/invites' -b 'sid=<your session cookie>'
+
+# disable (revoke)
+curl -sS -X PUT 'https://<your-domain>/api/admin/invites' \
+  -H 'content-type: application/json' \
+  -b 'sid=<your session cookie>' \
+  --data '{"id":"<invite id>"}'
+```
+
+Note: On a brand-new database with `INVITES_REQUIRED` enabled, you'll need to create the first invite directly in D1 or temporarily set `INVITES_REQUIRED=0` to create your admin account, then set it back.

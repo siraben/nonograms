@@ -4,6 +4,7 @@ export type Env = {
   DB: D1Database;
   BOOTSTRAP_TOKEN?: string;
   TURNSTILE_SECRET_KEY?: string;
+  INVITES_REQUIRED?: string; // set to "0" to allow open registration
 };
 
 export type Authed = { userId: string; username: string; isAdmin: boolean };
