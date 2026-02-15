@@ -33,6 +33,22 @@ npm run build
 npm run pages:dev
 ```
 
+## Local dev (Docker)
+
+1. Put local vars in `.dev.vars` (gitignored). If you want captcha locally, include:
+- `VITE_TURNSTILE_SITE_KEY`
+- `TURNSTILE_SECRET_KEY`
+
+2. Start:
+```sh
+docker compose up --build
+```
+
+3. Initialize local D1 schema (persists in `./.wrangler`):
+```sh
+docker compose run --rm web npx wrangler d1 migrations apply DB --local
+```
+
 ## Deploy (Cloudflare Pages)
 
 1. Create a D1 database and apply migrations:
@@ -53,4 +69,3 @@ npx wrangler d1 migrations apply DB
 npm run build
 npm run pages:deploy
 ```
-

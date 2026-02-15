@@ -7,10 +7,8 @@ RUN npm ci
 
 COPY . .
 
-# Build the static assets; wrangler serves from dist.
-RUN npm run build
-
 EXPOSE 8788
 
-CMD ["npm","run","pages:dev"]
-
+# Vite bakes `VITE_*` vars at build time, so we build on container start to pick up
+# values from `docker compose`'s `env_file`.
+CMD ["sh","-lc","npm run build && npm run pages:dev"]
