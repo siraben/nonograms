@@ -24,7 +24,9 @@ async function pbkdf2(password: string, salt: Uint8Array, iterations: number, le
 
 export async function hashPassword(password: string): Promise<{ saltB64: string; hashB64: string; iters: number }> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iters = 210_000;
+  // Cloudflare Workers' WebCrypto PBKDF2 currently rejects iteration counts > 100000.
+  // Keep this at/below that limit to avoid runtime 500s on registration.
+  const iters = 100_000;
   const derived = await pbkdf2(password, salt, iters, 32);
   return { saltB64: b64(salt.buffer), hashB64: b64(derived), iters };
 }
@@ -39,4 +41,3 @@ export async function verifyPassword(password: string, saltB64: string, hashB64:
   for (let i = 0; i < derived.length; i++) diff |= derived[i] ^ expected[i];
   return diff === 0;
 }
-
