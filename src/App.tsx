@@ -132,7 +132,6 @@ function AuthCard(props: {
 }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>("");
@@ -189,7 +188,7 @@ function AuthCard(props: {
       } else {
         const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
         if (siteKey && !captchaToken) throw new Error("complete captcha");
-        await Auth.register(username, password, inviteCode || null, captchaToken);
+        await Auth.register(username, password, captchaToken);
       }
       props.onToast({ kind: "ok", msg: props.mode === "login" ? "logged in" : "account created" });
       props.onAuthed();
@@ -218,15 +217,6 @@ function AuthCard(props: {
               autoComplete={props.mode === "login" ? "current-password" : "new-password"}
             />
           </div>
-          {props.mode === "register" ? (
-            <div className="field">
-              <label className="row">
-                <span>invite code</span>
-                <span className="muted">(only if configured)</span>
-              </label>
-              <input value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
-            </div>
-          ) : null}
           {props.mode === "register" ? (
             <div className="field">
               <label className="row">
@@ -271,15 +261,12 @@ function AuthCard(props: {
         </form>
       </div>
 
-      <div className="card">
-        <h2>Notes</h2>
-        <div className="muted">
-          <div>Passwords are stored as salted PBKDF2 hashes.</div>
-          <div style={{ marginTop: 8 }}>
-            If you set an invite code, add `INVITE_CODE` in Cloudflare Pages env vars.
-          </div>
-        </div>
-      </div>
+	      <div className="card">
+	        <h2>Notes</h2>
+	        <div className="muted">
+	          <div>Passwords are stored as salted PBKDF2 hashes.</div>
+	        </div>
+	      </div>
     </div>
   );
 }

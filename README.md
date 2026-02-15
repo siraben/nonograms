@@ -61,7 +61,6 @@ npx wrangler d1 migrations apply DB
 - Set D1 binding `DB` to the database.
 - Add env vars:
   - `TURNSTILE_SECRET_KEY` (required if you set `VITE_TURNSTILE_SITE_KEY`)
-  - `INVITE_CODE` (optional)
   - `VITE_TURNSTILE_SITE_KEY` (optional; build-time)
 
 3. Deploy:

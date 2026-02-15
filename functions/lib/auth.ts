@@ -2,7 +2,6 @@ import { err, getCookie, setCookieHeader } from "./http";
 
 export type Env = {
   DB: D1Database;
-  INVITE_CODE?: string;
   BOOTSTRAP_TOKEN?: string;
   TURNSTILE_SECRET_KEY?: string;
 };

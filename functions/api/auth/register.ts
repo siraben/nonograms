@@ -4,7 +4,7 @@ import { err, json, readJson } from "../../lib/http";
 import { hashPassword } from "../../lib/password";
 import { verifyTurnstile } from "../../lib/turnstile";
 
-type Body = { username: string; password: string; inviteCode?: string; captchaToken?: string };
+type Body = { username: string; password: string; captchaToken?: string };
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const setCookieOld = await destroySession(env, request);
@@ -23,10 +23,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     remoteip
   });
   if (!cap.ok) return err(403, `captcha: ${cap.reason || "failed"}`);
-
-  if (env.INVITE_CODE) {
-    if ((body.inviteCode || "").trim() !== env.INVITE_CODE) return err(403, "invalid invite code");
-  }
 
   const username = (body.username || "").trim().toLowerCase();
   const password = body.password || "";
