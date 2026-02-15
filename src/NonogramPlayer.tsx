@@ -54,11 +54,9 @@ export default function NonogramPlayer(props: {
   const [saving, setSaving] = useState(false);
   const [solved, setSolved] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [timerActive, setTimerActive] = useState(false);
   const [hoverRow, setHoverRow] = useState(-1);
   const [hoverCol, setHoverCol] = useState(-1);
   const inFlight = useRef(0);
-  const timerStart = useRef(0);
   const timerRef = useRef<number | null>(null);
   const dragging = useRef(false);
   const paintValue = useRef<CellState>(0);
@@ -69,22 +67,18 @@ export default function NonogramPlayer(props: {
     setState(props.initialState);
   }, [props.attemptId, props.initialState]);
 
-  // Timer
+  // Timer — starts immediately since startedAt is set at attempt creation
   useEffect(() => {
-    if (props.readonly || solved) return;
-    if (props.startedAt) {
-      const start = new Date(props.startedAt).getTime();
-      timerStart.current = start;
-      setTimerActive(true);
+    if (props.readonly || solved || !props.startedAt) return;
+    const start = new Date(props.startedAt).getTime();
+    setElapsed(Date.now() - start);
+    timerRef.current = window.setInterval(() => {
       setElapsed(Date.now() - start);
-      timerRef.current = window.setInterval(() => {
-        setElapsed(Date.now() - start);
-      }, 200);
-    }
+    }, 200);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [props.startedAt, props.readonly]);
+  }, [props.startedAt, props.readonly, solved]);
 
   // Global mouseup ends drag
   useEffect(() => {
@@ -103,19 +97,8 @@ export default function NonogramPlayer(props: {
     void finishAttempt(true);
   }, [state]);
 
-  function startTimerIfNeeded() {
-    if (timerActive || props.readonly || solved) return;
-    const now = Date.now();
-    timerStart.current = now;
-    setTimerActive(true);
-    timerRef.current = window.setInterval(() => {
-      setElapsed(Date.now() - now);
-    }, 200);
-  }
-
   function stopTimer() {
     if (timerRef.current) clearInterval(timerRef.current);
-    setTimerActive(false);
   }
 
   // Goobix-style: 0 → 1 → 2 → 0
@@ -138,7 +121,6 @@ export default function NonogramPlayer(props: {
   // Mousedown on a cell: cycle it and start drag-painting
   function onCellDown(idx: number) {
     if (props.readonly || solved) return;
-    startTimerIfNeeded();
     dragging.current = true;
     setState((prev) => {
       const newVal = cycleState(prev[idx]);
@@ -223,7 +205,6 @@ export default function NonogramPlayer(props: {
     const touch = e.touches[0];
     const idx = getCellIdx(touch.clientX, touch.clientY);
     if (idx === null || idx < 0) return;
-    startTimerIfNeeded();
     dragging.current = true;
     lastTouchIdx.current = idx;
     setState((prev) => {

@@ -79,9 +79,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const attemptId = crypto.randomUUID();
   const state = Array.from({ length: puzzleRow.width * puzzleRow.height }, () => 0);
   await env.DB.prepare(
-    "INSERT INTO attempts (id, puzzle_id, user_id, created_at, eligible, completed, current_state_json) VALUES (?, ?, ?, ?, ?, 0, ?)"
+    "INSERT INTO attempts (id, puzzle_id, user_id, created_at, started_at, eligible, completed, current_state_json) VALUES (?, ?, ?, ?, ?, ?, 0, ?)"
   )
-    .bind(attemptId, puzzleId, authed.userId, now, eligible, JSON.stringify(state))
+    .bind(attemptId, puzzleId, authed.userId, now, now, eligible, JSON.stringify(state))
     .run();
 
   const puzzle = await env.DB.prepare(
@@ -92,7 +92,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   if (!puzzle) return err(500, "puzzle missing");
 
   return json({
-    attempt: { id: attemptId, puzzleId, eligible: eligible === 1, state },
+    attempt: { id: attemptId, puzzleId, eligible: eligible === 1, startedAt: now, state },
     puzzle: {
       id: puzzle.id,
       title: `${puzzle.width}x${puzzle.height} ${puzzle.id.slice(0, 8)}`,

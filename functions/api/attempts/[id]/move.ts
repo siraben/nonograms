@@ -29,8 +29,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   if (row.completed === 1) return err(409, "attempt finished");
 
   const now = new Date();
-  const startedAt = row.startedAt ? new Date(row.startedAt) : now;
-  const atMs = row.startedAt ? now.getTime() - startedAt.getTime() : 0;
+  const startedAt = new Date(row.startedAt!);
+  const atMs = now.getTime() - startedAt.getTime();
 
   // Update state.
   const state: number[] = JSON.parse(row.stateJson);
@@ -49,8 +49,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     env.DB.prepare(
       "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, ?, ?, ?, ?, ?)"
     ).bind(attemptId, seq, atMs, idx, st, now.toISOString()),
-    env.DB.prepare("UPDATE attempts SET current_state_json = ?, started_at = COALESCE(started_at, ?) WHERE id = ?")
-      .bind(JSON.stringify(state), startedAt.toISOString(), attemptId)
+    env.DB.prepare("UPDATE attempts SET current_state_json = ? WHERE id = ?")
+      .bind(JSON.stringify(state), attemptId)
   ]);
 
   return json({ ok: true, seq, atMs });

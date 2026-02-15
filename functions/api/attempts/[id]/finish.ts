@@ -45,13 +45,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   const v = validateState(sol, state);
 
   const now = new Date();
-  const startedAt = a.startedAt ? new Date(a.startedAt) : now;
+  const startedAt = new Date(a.startedAt!);
   const durationMs = Math.max(0, now.getTime() - startedAt.getTime());
 
   if (!v.solved) {
     // Persist latest state anyway so resume works.
-    await env.DB.prepare("UPDATE attempts SET current_state_json = ?, started_at = COALESCE(started_at, ?) WHERE id = ?")
-      .bind(JSON.stringify(state), startedAt.toISOString(), attemptId)
+    await env.DB.prepare("UPDATE attempts SET current_state_json = ? WHERE id = ?")
+      .bind(JSON.stringify(state), attemptId)
       .run();
     return json({ solved: false, wrongFilled: v.wrongFilled, missingFilled: v.missingFilled });
   }
@@ -63,10 +63,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
 
   await env.DB.batch([
     env.DB.prepare(
-      "UPDATE attempts SET current_state_json = ?, started_at = COALESCE(started_at, ?), completed = 1, finished_at = ?, duration_ms = ?, eligible = ? WHERE id = ?"
+      "UPDATE attempts SET current_state_json = ?, completed = 1, finished_at = ?, duration_ms = ?, eligible = ? WHERE id = ?"
     ).bind(
       JSON.stringify(state),
-      startedAt.toISOString(),
       now.toISOString(),
       durationMs,
       eligible,
