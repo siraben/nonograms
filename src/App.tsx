@@ -139,7 +139,7 @@ export default function App() {
               </ul>
               <h3>Timer + Leaderboard</h3>
               <ul>
-                <li>Timer starts on your first move</li>
+                <li>Timer starts when you click Start</li>
                 <li>Leaderboard is per puzzle size</li>
                 <li>Viewing a replay disqualifies you for that puzzle</li>
               </ul>
@@ -492,17 +492,23 @@ function Play(props: {
 }) {
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
+  const [dims, setDims] = useState<{ width: number; height: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const r = await api<{ puzzle: Puzzle; attempt: Attempt }>(
+        const r = await api<{ puzzle: Puzzle | { width: number; height: number }; attempt: Attempt }>(
           `/api/attempts/${encodeURIComponent(props.attemptId)}`
         );
-        setPuzzle(r.puzzle);
         setAttempt(r.attempt);
+        if ("rowClues" in r.puzzle) {
+          setPuzzle(r.puzzle as Puzzle);
+        } else {
+          setDims(r.puzzle);
+        }
       } catch (err) {
         props.onToast({ kind: "bad", msg: (err as Error).message });
       } finally {
@@ -510,6 +516,24 @@ function Play(props: {
       }
     })();
   }, [props.attemptId]);
+
+  async function startAttempt() {
+    setStarting(true);
+    try {
+      const r = await api<{ startedAt: string; puzzle: Puzzle }>(
+        `/api/attempts/${encodeURIComponent(props.attemptId)}/start`,
+        { method: "POST" }
+      );
+      setPuzzle(r.puzzle);
+      setAttempt((prev) => prev ? { ...prev, startedAt: r.startedAt } : prev);
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  const notStarted = attempt && !attempt.startedAt;
 
   return (
     <>
@@ -520,7 +544,27 @@ function Play(props: {
       </div>
       <div className="card">
         {loading && <div className="muted">Loading puzzle...</div>}
-        {puzzle && attempt && (
+        {notStarted && dims && (
+          <div className="start-gate">
+            <div className="start-grid" style={{
+              gridTemplateColumns: `repeat(${dims.width}, 28px)`,
+            }}>
+              {Array.from({ length: dims.width * dims.height }, (_, i) => (
+                <div key={i} className="start-cell" />
+              ))}
+            </div>
+            <div className="start-overlay">
+              <button
+                className="btn primary start-btn"
+                disabled={starting}
+                onClick={startAttempt}
+              >
+                {starting ? "Starting..." : `Start ${dims.width}×${dims.height}`}
+              </button>
+            </div>
+          </div>
+        )}
+        {puzzle && attempt?.startedAt && (
           <NonogramPlayer
             attemptId={attempt.id}
             eligible={attempt.eligible}

@@ -35,17 +35,27 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
   if (!a) return err(404, "attempt not found");
 
   const state = JSON.parse(a.stateJson);
+  const attempt = {
+    id: a.id,
+    puzzleId: a.puzzleId,
+    eligible: a.eligible === 1,
+    completed: a.completed === 1,
+    startedAt: a.startedAt,
+    finishedAt: a.finishedAt,
+    durationMs: a.durationMs,
+    state
+  };
+
+  // Only reveal clues once the attempt has been started.
+  if (!a.startedAt) {
+    return json({
+      attempt,
+      puzzle: { width: a.width, height: a.height }
+    });
+  }
+
   return json({
-    attempt: {
-      id: a.id,
-      puzzleId: a.puzzleId,
-      eligible: a.eligible === 1,
-      completed: a.completed === 1,
-      startedAt: a.startedAt,
-      finishedAt: a.finishedAt,
-      durationMs: a.durationMs,
-      state
-    },
+    attempt,
     puzzle: {
       id: a.puzzleId,
       title: `${a.width}x${a.height} ${a.puzzleId.slice(0, 8)}`,

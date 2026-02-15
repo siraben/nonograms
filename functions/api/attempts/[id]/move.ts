@@ -27,6 +27,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     .first<{ id: string; startedAt: string | null; completed: number; stateJson: string }>();
   if (!row) return err(404, "attempt not found");
   if (row.completed === 1) return err(409, "attempt finished");
+  if (!row.startedAt) return err(409, "attempt not started");
 
   const now = new Date();
   const startedAt = new Date(row.startedAt!);

@@ -467,3 +467,36 @@ a {
   color: var(--muted);
   margin-right: 8px;
 }
+
+.start-gate {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.start-grid {
+  display: grid;
+  gap: 0;
+  opacity: 0.15;
+  filter: blur(1px);
+}
+
+.start-cell {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--cell-border);
+  background: var(--cell-bg);
+}
+
+.start-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.start-btn {
+  font-size: 18px !important;
+  padding: 14px 36px !important;
+}

@@ -32,6 +32,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
 
   if (!a) return err(404, "attempt not found");
   if (a.completed === 1) return err(409, "attempt already finished");
+  if (!a.startedAt) return err(409, "attempt not started");
 
   const width = a.width | 0;
   const height = a.height | 0;
