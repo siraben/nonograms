@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "pages:dev": "wrangler pages dev dist --compatibility-date=2025-01-01",
+    "pages:dev": "wrangler pages dev dist --compatibility-date=2025-01-01 --ip=0.0.0.0 --port=8788",
     "d1:migrate:local": "wrangler d1 migrations apply DB --local",
     "d1:migrate:remote": "wrangler d1 migrations apply DB",
-    "pages:deploy": "wrangler pages deploy dist"
+    "pages:deploy": "wrangler pages deploy dist --project-name nonogram-server",
+    "deploy": "npm run build && npm run pages:deploy"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -25,4 +26,3 @@
     "wrangler": "^4.0.0"
   }
 }
-

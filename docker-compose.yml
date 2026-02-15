@@ -1,0 +1,13 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8788:8788"
+    env_file:
+      - .dev.vars
+    volumes:
+      # Persist local D1/kv state used by wrangler.
+      - ./.wrangler:/app/.wrangler
+
