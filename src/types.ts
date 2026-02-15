@@ -29,6 +29,8 @@ export type LeaderboardEntry = {
   durationMs: number;
   finishedAt: string;
   username: string;
+  width: number;
+  height: number;
 };
 
 export type ReplayMove = { seq: number; atMs: number; idx: number; state: CellState };

@@ -288,11 +288,12 @@ function AuthCard(props: {
 function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
   const [leader, setLeader] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lbSize, setLbSize] = useState<5 | 10>(10);
 
   async function refreshLeader() {
     setLoading(true);
     try {
-      const r = await api<{ leaderboard: LeaderboardEntry[] }>("/api/leaderboard");
+      const r = await api<{ leaderboard: LeaderboardEntry[] }>(`/api/leaderboard?size=${lbSize}`);
       setLeader(r.leaderboard);
     } finally {
       setLoading(false);
@@ -301,7 +302,7 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
 
   useEffect(() => {
     void refreshLeader();
-  }, []);
+  }, [lbSize]);
 
   async function newGame(puzzleId?: string, size?: number) {
     props.onToast(null);
@@ -353,13 +354,29 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
           }}
         >
           <h2 style={{ margin: 0 }}>Leaderboard</h2>
-          <button
-            className="btn"
-            onClick={() => void refreshLeader()}
-            style={{ fontSize: 12, padding: "4px 10px" }}
-          >
-            refresh
-          </button>
+          <div className="row" style={{ gap: 6 }}>
+            <button
+              className="btn"
+              style={{ fontSize: 12, padding: "4px 10px", opacity: lbSize === 5 ? 1 : 0.7 }}
+              onClick={() => setLbSize(5)}
+            >
+              5x5
+            </button>
+            <button
+              className="btn"
+              style={{ fontSize: 12, padding: "4px 10px", opacity: lbSize === 10 ? 1 : 0.7 }}
+              onClick={() => setLbSize(10)}
+            >
+              10x10
+            </button>
+            <button
+              className="btn"
+              onClick={() => void refreshLeader()}
+              style={{ fontSize: 12, padding: "4px 10px" }}
+            >
+              refresh
+            </button>
+          </div>
         </div>
         {loading ? (
           <div className="muted">Loading...</div>
@@ -377,7 +394,7 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
                   </span>
                 </div>
                 <div className="meta">
-                  puzzle {e.puzzleId.slice(0, 8)} &mdash;{" "}
+                  {e.width}x{e.height} {e.puzzleId.slice(0, 8)} &mdash;{" "}
                   {new Date(e.finishedAt).toLocaleDateString()}
                 </div>
                 <div className="row" style={{ marginTop: 6 }}>
