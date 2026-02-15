@@ -57,6 +57,7 @@ export default function NonogramPlayer(props: {
   const [hoverRow, setHoverRow] = useState(-1);
   const [hoverCol, setHoverCol] = useState(-1);
   const inFlight = useRef(0);
+  const pendingMoves = useRef<Promise<unknown>[]>([]);
   const timerRef = useRef<number | null>(null);
   const dragging = useRef(false);
   const paintValue = useRef<CellState>(0);
@@ -138,27 +139,29 @@ export default function NonogramPlayer(props: {
     applyCell(idx, paintValue.current);
   }
 
-  async function postMove(idx: number, st: CellState) {
+  function postMove(idx: number, st: CellState) {
     if (props.readonly) return;
     inFlight.current++;
     setSaving(true);
-    try {
-      await api(
-        `/api/attempts/${encodeURIComponent(props.attemptId)}/move`,
-        { method: "POST", json: { idx, state: st } }
-      );
-    } catch (err) {
+    const p = api(
+      `/api/attempts/${encodeURIComponent(props.attemptId)}/move`,
+      { method: "POST", json: { idx, state: st } }
+    ).catch((err) => {
       props.onToast({ kind: "bad", msg: (err as Error).message });
-    } finally {
+    }).finally(() => {
+      pendingMoves.current = pendingMoves.current.filter((x) => x !== p);
       inFlight.current--;
       if (inFlight.current <= 0) setSaving(false);
-    }
+    });
+    pendingMoves.current.push(p);
   }
 
   async function finishAttempt(auto: boolean) {
     if (props.readonly || solved || finishing.current) return;
     finishing.current = true;
     if (!auto) props.onToast(null);
+    // Wait for all in-flight moves to reach the server before validating.
+    await Promise.all(pendingMoves.current);
     try {
       const r = await api<{
         solved: boolean;
