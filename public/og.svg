@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b8def"/>
+      <stop offset="1" stop-color="#7ba4f7"/>
+    </linearGradient>
+    <style>
+      .bg{fill:url(#g)}
+      .panel{fill:rgba(255,255,255,0.94)}
+      .ink{fill:#2d3436}
+      .muted{fill:rgba(45,52,54,0.65)}
+      .cell{fill:#ffffff}
+      .grid{stroke:rgba(45,52,54,0.18);stroke-width:6}
+      .dot{fill:#2d3436}
+      .title{font:800 84px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+      .sub{font:600 34px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+      .mono{font:700 28px ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="630"/>
+
+  <g transform="translate(70 80)">
+    <rect class="panel" x="0" y="0" width="1060" height="470" rx="36"/>
+
+    <g transform="translate(60 70)">
+      <text class="title ink" x="0" y="0" dominant-baseline="hanging">nonogram</text>
+      <text class="sub muted" x="0" y="108" dominant-baseline="hanging">friends-only puzzle room</text>
+      <text class="mono muted" x="0" y="170" dominant-baseline="hanging">5x5 + 10x10 • replays • leaderboards</text>
+    </g>
+
+    <!-- mini board -->
+    <g transform="translate(740 110)">
+      <rect class="cell" x="0" y="0" width="260" height="260" rx="26"/>
+      <g class="grid">
+        <line x1="65" y1="20" x2="65" y2="240"/>
+        <line x1="130" y1="20" x2="130" y2="240"/>
+        <line x1="195" y1="20" x2="195" y2="240"/>
+        <line x1="20" y1="65" x2="240" y2="65"/>
+        <line x1="20" y1="130" x2="240" y2="130"/>
+        <line x1="20" y1="195" x2="240" y2="195"/>
+      </g>
+      <g class="dot">
+        <rect x="20" y="20" width="45" height="45" rx="10"/>
+        <rect x="195" y="20" width="45" height="45" rx="10"/>
+        <rect x="105" y="85" width="45" height="45" rx="10"/>
+        <rect x="20" y="195" width="45" height="45" rx="10"/>
+        <rect x="195" y="195" width="45" height="45" rx="10"/>
+      </g>
+    </g>
+  </g>
+</svg>
+
