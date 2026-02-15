@@ -16,13 +16,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     return err(400, "bad json");
   }
 
-  const remoteip = request.headers.get("CF-Connecting-IP");
-  const cap = await verifyTurnstile({
-    secretKey: env.TURNSTILE_SECRET_KEY,
-    token: body.captchaToken,
-    remoteip
-  });
-  if (!cap.ok) return err(403, `captcha: ${cap.reason || "failed"}`);
+  if (env.REQUIRE_CAPTCHA === "1") {
+    const remoteip = request.headers.get("CF-Connecting-IP");
+    const cap = await verifyTurnstile({
+      secretKey: env.TURNSTILE_SECRET_KEY,
+      token: body.captchaToken,
+      remoteip
+    });
+    if (!cap.ok) return err(403, `captcha: ${cap.reason || "failed"}`);
+  }
 
   const username = (body.username || "").trim().toLowerCase();
   const password = body.password || "";

@@ -147,6 +147,7 @@ function AuthCard(props: {
 
   useEffect(() => {
     if (props.mode !== "register") return;
+    if (import.meta.env.VITE_REQUIRE_CAPTCHA !== "1") return;
     const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
     if (!siteKey) return;
 
@@ -194,9 +195,10 @@ function AuthCard(props: {
       if (props.mode === "login") {
         await Auth.login(username, password, remember);
       } else {
+        const requireCaptcha = import.meta.env.VITE_REQUIRE_CAPTCHA === "1";
         const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
-        if (siteKey && !captchaToken) throw new Error("Complete captcha first");
-        await Auth.register(username, password, captchaToken);
+        if (requireCaptcha && siteKey && !captchaToken) throw new Error("Complete captcha first");
+        await Auth.register(username, password, requireCaptcha ? captchaToken : "");
       }
       props.onToast({
         kind: "ok",
@@ -234,14 +236,22 @@ function AuthCard(props: {
         {props.mode === "register" && (
           <div className="field">
             <label>Captcha</label>
-            <div id="turnstile" style={{ minHeight: 70 }} />
-            {(import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
-              <div className="muted" style={{ fontSize: 12 }}>
-                {captchaReady ? "Verified" : "Pending..."}
-              </div>
+            {import.meta.env.VITE_REQUIRE_CAPTCHA === "1" ? (
+              <>
+                <div id="turnstile" style={{ minHeight: 70 }} />
+                {(import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {captchaReady ? "Verified" : "Pending..."}
+                  </div>
+                ) : (
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    Captcha misconfigured
+                  </div>
+                )}
+              </>
             ) : (
               <div className="muted" style={{ fontSize: 12 }}>
-                Captcha disabled in dev
+                Captcha disabled
               </div>
             )}
           </div>
@@ -262,6 +272,7 @@ function AuthCard(props: {
             disabled={
               submitting ||
               (props.mode === "register" &&
+                import.meta.env.VITE_REQUIRE_CAPTCHA === "1" &&
                 Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) &&
                 !captchaReady)
             }
