@@ -472,6 +472,7 @@ function Replay(props: {
   const [meta, setMeta] = useState<{ username: string; durationMs: number | null } | null>(null);
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
+  const [replayElapsed, setReplayElapsed] = useState(0);
   const [state, setState] = useState<CellState[]>(
     Array.from({ length: 100 }, () => 0 as CellState)
   );
@@ -481,7 +482,7 @@ function Replay(props: {
     (async () => {
       setPlaying(false);
       setPos(0);
-      if (timer.current) window.clearInterval(timer.current);
+      if (timer.current) clearTimeout(timer.current);
       try {
         const r = await api<{
           puzzle: Puzzle;
@@ -494,12 +495,13 @@ function Replay(props: {
         setState(
           Array.from({ length: r.puzzle.width * r.puzzle.height }, () => 0 as CellState)
         );
+        setReplayElapsed(0);
       } catch (err) {
         props.onToast({ kind: "bad", msg: (err as Error).message });
       }
     })();
     return () => {
-      if (timer.current) window.clearInterval(timer.current);
+      if (timer.current) clearTimeout(timer.current);
     };
   }, [props.attemptId]);
 
@@ -516,26 +518,43 @@ function Replay(props: {
     }
     setState(next);
     setPos(k);
+    setReplayElapsed(k > 0 && moves[k - 1] ? moves[k - 1].atMs : 0);
   }
 
   function play() {
-    if (!puzzle) return;
-    if (timer.current) window.clearInterval(timer.current);
+    if (!puzzle || !moves.length) return;
+    if (timer.current) clearTimeout(timer.current);
     setPlaying(true);
+
+    // Scale replay: cap total duration between 10s and 45s
+    const totalMs = moves[moves.length - 1].atMs - moves[0].atMs;
+    const scale = totalMs < 10000 ? 10000 / Math.max(totalMs, 1) :
+                  totalMs > 45000 ? 45000 / totalMs : 1;
+
     let i = pos;
-    timer.current = window.setInterval(() => {
+    function step() {
       i++;
       if (i > moves.length) {
-        if (timer.current) window.clearInterval(timer.current);
         setPlaying(false);
+        if (meta?.durationMs) setReplayElapsed(meta.durationMs);
         return;
       }
       applyTo(i);
-    }, 120);
+      if (i < moves.length) {
+        let delay = (moves[i].atMs - moves[i - 1].atMs) * scale;
+        if (delay > 1000) delay = 1000; // cap individual gaps at 1s
+        timer.current = window.setTimeout(step, delay);
+      } else {
+        // Last move applied, finish
+        setPlaying(false);
+        if (meta?.durationMs) setReplayElapsed(meta.durationMs);
+      }
+    }
+    step();
   }
 
   function pause() {
-    if (timer.current) window.clearInterval(timer.current);
+    if (timer.current) clearTimeout(timer.current);
     setPlaying(false);
   }
 
@@ -562,7 +581,8 @@ function Replay(props: {
             {meta ? (
               <>
                 {meta.username} &mdash;{" "}
-                {meta.durationMs ? `${(meta.durationMs / 1000).toFixed(2)}s` : "?"} &mdash;{" "}
+                {(replayElapsed / 1000).toFixed(1)}s
+                {meta.durationMs ? ` / ${(meta.durationMs / 1000).toFixed(1)}s` : ""} &mdash;{" "}
                 {pos}/{moves.length} moves
               </>
             ) : (
