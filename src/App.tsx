@@ -286,7 +286,7 @@ function AuthCard(props: {
         </div>
         {props.mode === "register" && (
           <div className="field">
-            <label>Invite code</label>
+            <label>Invite code (if required)</label>
             <input
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
@@ -327,7 +327,6 @@ function AuthCard(props: {
             className="btn primary"
             disabled={
               submitting ||
-              (props.mode === "register" && inviteCode.trim().length === 0) ||
               (props.mode === "register" &&
                 Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) &&
                 !captchaReady)
