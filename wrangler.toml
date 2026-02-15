@@ -1,0 +1,11 @@
+name = "nonogram-server"
+compatibility_date = "2025-01-01"
+
+# Wrangler's Pages commands use this for local dev / deploy.
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nonogram-db"
+database_id = "REPLACE_ME"
+

@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
+
+# direnv
+.direnv/
+.envrc.local
+
+# OpenTofu/Terraform
+.terraform/
+.tofu/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# OS/editor
+.DS_Store

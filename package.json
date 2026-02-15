@@ -1,0 +1,28 @@
+{
+  "name": "nonogram-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "pages:dev": "wrangler pages dev dist --compatibility-date=2025-01-01",
+    "d1:migrate:local": "wrangler d1 migrations apply DB --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply DB",
+    "pages:deploy": "wrangler pages deploy dist"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "wrangler": "^4.0.0"
+  }
+}
+
