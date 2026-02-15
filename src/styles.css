@@ -152,18 +152,6 @@ a {
   border-color: var(--danger);
 }
 
-.tool {
-  border-radius: 20px;
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-.tool.on {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
 .field {
   margin-bottom: 12px;
 }
@@ -279,6 +267,7 @@ a {
   display: grid;
   gap: 0;
   user-select: none;
+  touch-action: none;
   width: fit-content;
   margin: 0 auto;
 }
@@ -297,6 +286,11 @@ a {
 .clue {
   background: var(--clue-bg);
   color: var(--muted);
+}
+
+.clue.highlight {
+  background: var(--accent-light);
+  color: var(--text);
 }
 
 .cell {
@@ -333,14 +327,6 @@ a {
   font-variant-numeric: tabular-nums;
   text-align: center;
   padding: 4px 0 8px;
-}
-
-.game-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
 }
 
 .game-status {
