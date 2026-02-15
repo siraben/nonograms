@@ -333,3 +333,54 @@ a {
   font-size: 13px;
   color: var(--muted);
 }
+
+.timeline {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tl-item {
+  display: flex;
+  gap: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.tl-item:last-child {
+  border-bottom: none;
+}
+
+.tl-item:hover {
+  background: var(--accent-light);
+}
+
+.tl-item.tl-past {
+  color: var(--text);
+}
+
+.tl-item.tl-active {
+  background: var(--accent-light);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tl-time {
+  min-width: 48px;
+  text-align: right;
+}
+
+.tl-action {
+  min-width: 32px;
+  font-weight: 600;
+}
+
+.tl-cell {
+  color: var(--muted);
+}
