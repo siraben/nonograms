@@ -48,7 +48,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
     },
     puzzle: {
       id: a.puzzleId,
-      title: `10x10 ${a.puzzleId.slice(0, 8)}`,
+      title: `${a.width}x${a.height} ${a.puzzleId.slice(0, 8)}`,
       width: a.width,
       height: a.height,
       rowClues: JSON.parse(a.rowCluesJson),

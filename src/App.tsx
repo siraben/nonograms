@@ -301,12 +301,15 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
     void refreshLeader();
   }, []);
 
-  async function newGame(puzzleId?: string) {
+  async function newGame(puzzleId?: string, size?: number) {
     props.onToast(null);
     try {
+      const json: Record<string, unknown> = {};
+      if (puzzleId) json.puzzleId = puzzleId;
+      if (size) json.size = size;
       const r = await api<{ attempt: { id: string } }>("/api/attempts/new", {
         method: "POST",
-        json: puzzleId ? { puzzleId } : {},
+        json,
       });
       nav(`/a/${r.attempt.id}`);
     } catch (err) {
@@ -317,13 +320,22 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
   return (
     <>
       <div className="card" style={{ textAlign: "center" }}>
-        <button
-          className="btn primary"
-          style={{ fontSize: 16, padding: "12px 28px" }}
-          onClick={() => void newGame()}
-        >
-          New Random 10x10
-        </button>
+        <div className="row" style={{ justifyContent: "center", gap: 12 }}>
+          <button
+            className="btn primary"
+            style={{ fontSize: 16, padding: "12px 28px" }}
+            onClick={() => void newGame(undefined, 5)}
+          >
+            New 5x5
+          </button>
+          <button
+            className="btn primary"
+            style={{ fontSize: 16, padding: "12px 28px" }}
+            onClick={() => void newGame(undefined, 10)}
+          >
+            New 10x10
+          </button>
+        </div>
         <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
           Viewing a replay disqualifies you from that puzzle's leaderboard.
         </div>
