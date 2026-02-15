@@ -1,21 +1,13 @@
 import type { Env } from "../../../lib/auth";
 import { requireUser } from "../../../lib/auth";
-import { err, json, readJson } from "../../../lib/http";
+import { err, json } from "../../../lib/http";
 import { parseSolution, validateState } from "../../../lib/nonogram";
-
-type Body = { state?: number[] };
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }) => {
   const authed = await requireUser(env, request);
   if (authed instanceof Response) return authed;
 
   const attemptId = String(params.id || "");
-  let body: Body = {};
-  try {
-    body = await readJson<Body>(request);
-  } catch {
-    // ok
-  }
 
   const a = await env.DB.prepare(
     `SELECT a.id, a.puzzle_id as puzzleId, a.started_at as startedAt, a.completed as completed, a.eligible as eligible,
@@ -45,7 +37,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   const height = a.height | 0;
   const n = width * height;
 
-  const state: number[] = body.state ? body.state.map((x) => x | 0) : JSON.parse(a.stateJson);
+  // Always use server-stored state to prevent client-supplied solution bypass.
+  const state: number[] = JSON.parse(a.stateJson);
   if (!Array.isArray(state) || state.length !== n) return err(400, "bad state");
 
   const sol = parseSolution(a.solution, width, height);
