@@ -7,4 +7,4 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "nonogram-db"
-database_id = "85829995-0813-41fe-aac4-6a2e5cbb4f67"
+database_id = "3e4ae329-f1bd-484d-8b74-2abee9b286df"
