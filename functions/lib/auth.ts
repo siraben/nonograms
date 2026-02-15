@@ -4,7 +4,6 @@ export type Env = {
   DB: D1Database;
   BOOTSTRAP_TOKEN?: string;
   TURNSTILE_SECRET_KEY?: string;
-  REQUIRE_CAPTCHA?: string; // set to "1" to enforce captcha on registration
 };
 
 export type Authed = { userId: string; username: string; isAdmin: boolean };

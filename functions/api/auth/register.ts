@@ -16,7 +16,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     return err(400, "bad json");
   }
 
-  if (env.REQUIRE_CAPTCHA === "1") {
+  // Enforce captcha if configured (recommended for production).
+  if (env.TURNSTILE_SECRET_KEY) {
     const remoteip = request.headers.get("CF-Connecting-IP");
     const cap = await verifyTurnstile({
       secretKey: env.TURNSTILE_SECRET_KEY,

@@ -147,7 +147,6 @@ function AuthCard(props: {
 
   useEffect(() => {
     if (props.mode !== "register") return;
-    if (import.meta.env.VITE_REQUIRE_CAPTCHA !== "1") return;
     const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
     if (!siteKey) return;
 
@@ -195,10 +194,9 @@ function AuthCard(props: {
       if (props.mode === "login") {
         await Auth.login(username, password, remember);
       } else {
-        const requireCaptcha = import.meta.env.VITE_REQUIRE_CAPTCHA === "1";
         const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
-        if (requireCaptcha && siteKey && !captchaToken) throw new Error("Complete captcha first");
-        await Auth.register(username, password, requireCaptcha ? captchaToken : "");
+        if (siteKey && !captchaToken) throw new Error("Complete captcha first");
+        await Auth.register(username, password, captchaToken);
       }
       props.onToast({
         kind: "ok",
@@ -236,22 +234,16 @@ function AuthCard(props: {
         {props.mode === "register" && (
           <div className="field">
             <label>Captcha</label>
-            {import.meta.env.VITE_REQUIRE_CAPTCHA === "1" ? (
+            {(import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
               <>
                 <div id="turnstile" style={{ minHeight: 70 }} />
-                {(import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
-                  <div className="muted" style={{ fontSize: 12 }}>
-                    {captchaReady ? "Verified" : "Pending..."}
-                  </div>
-                ) : (
-                  <div className="muted" style={{ fontSize: 12 }}>
-                    Captcha misconfigured
-                  </div>
-                )}
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {captchaReady ? "Verified" : "Pending..."}
+                </div>
               </>
             ) : (
               <div className="muted" style={{ fontSize: 12 }}>
-                Captcha disabled
+                Captcha disabled in dev
               </div>
             )}
           </div>
@@ -272,7 +264,6 @@ function AuthCard(props: {
             disabled={
               submitting ||
               (props.mode === "register" &&
-                import.meta.env.VITE_REQUIRE_CAPTCHA === "1" &&
                 Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) &&
                 !captchaReady)
             }
@@ -477,6 +468,7 @@ function Replay(props: {
     Array.from({ length: 100 }, () => 0 as CellState)
   );
   const timer = useRef<number | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -504,6 +496,16 @@ function Replay(props: {
       if (timer.current) clearTimeout(timer.current);
     };
   }, [props.attemptId]);
+
+  // Auto-scroll timeline to current move
+  useEffect(() => {
+    const container = timelineRef.current;
+    if (!container) return;
+    const active = container.querySelector("[data-active]") as HTMLElement | null;
+    if (active) {
+      active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [pos]);
 
   function applyTo(k: number) {
     if (!puzzle) return;
@@ -602,6 +604,32 @@ function Replay(props: {
             readonly
             onToast={props.onToast}
           />
+        )}
+        {moves.length > 0 && puzzle && (
+          <div className="timeline" ref={timelineRef}>
+            {moves.map((m, i) => {
+              const active = i + 1 === pos;
+              const past = i + 1 <= pos;
+              const r = Math.floor(m.idx / puzzle.width) + 1;
+              const c = (m.idx % puzzle.width) + 1;
+              const action = m.state === 1 ? "fill" : m.state === 2 ? "X" : "clear";
+              return (
+                <div
+                  key={m.seq}
+                  className={`tl-item${active ? " tl-active" : ""}${past ? " tl-past" : ""}`}
+                  data-active={active ? "" : undefined}
+                  onClick={() => {
+                    if (playing) pause();
+                    applyTo(i + 1);
+                  }}
+                >
+                  <span className="tl-time">{(m.atMs / 1000).toFixed(1)}s</span>
+                  <span className="tl-action">{action}</span>
+                  <span className="tl-cell">r{r}c{c}</span>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </>
