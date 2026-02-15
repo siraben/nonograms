@@ -15,6 +15,9 @@
   --cell-bg: #fff;
   --clue-bg: #f6f8fa;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --ok-light: rgba(39, 174, 96, 0.1);
+  --danger-light: rgba(231, 76, 60, 0.1);
   color-scheme: light;
 }
 
@@ -35,6 +38,9 @@
   --cell-bg: #2c2c50;
   --clue-bg: #202044;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --ok-light: rgba(110, 201, 110, 0.15);
+  --danger-light: rgba(255, 107, 107, 0.15);
   color-scheme: dark;
 }
 
@@ -152,6 +158,25 @@ a {
   border-color: var(--danger);
 }
 
+.btn.danger:hover:not(:disabled) {
+  background: var(--danger-light);
+}
+
+.btn.sm {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.btn.lg {
+  font-size: 16px;
+  padding: 12px 28px;
+}
+
+.btn.selected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .field {
   margin-bottom: 12px;
 }
@@ -232,13 +257,13 @@ a {
 }
 
 .toast.ok {
-  background: rgba(39, 174, 96, 0.1);
+  background: var(--ok-light);
   color: var(--ok);
   border: 1px solid var(--ok);
 }
 
 .toast.bad {
-  background: rgba(231, 76, 60, 0.1);
+  background: var(--danger-light);
   color: var(--danger);
   border: 1px solid var(--danger);
 }
@@ -346,6 +371,8 @@ a {
 .game-status {
   font-size: 13px;
   color: var(--muted);
+  text-align: center;
+  margin-bottom: 8px;
 }
 
 .timeline {
@@ -381,6 +408,7 @@ a {
 
 .tl-item.tl-active {
   background: var(--accent-light);
+  box-shadow: inset 3px 0 0 var(--accent);
   font-weight: 600;
   color: var(--text);
 }
@@ -413,7 +441,7 @@ a {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
   width: 100%;
   max-width: 420px;
   max-height: 80vh;
@@ -510,7 +538,67 @@ a {
   place-items: center;
 }
 
-.start-btn {
-  font-size: 18px !important;
-  padding: 14px 36px !important;
+.text-center {
+  text-align: center;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.card-narrow {
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.back-nav {
+  margin-bottom: 8px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.card-header-row h2 {
+  margin-bottom: 0;
+}
+
+.item-actions {
+  margin-top: 6px;
+}
+
+.check-area {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.replay-controls {
+  margin-bottom: 10px;
+}
+
+.turnstile-wrap {
+  min-height: 70px;
+}
+
+.remember-field {
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.btn.start-btn {
+  font-size: 18px;
+  padding: 14px 36px;
 }

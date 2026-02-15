@@ -303,13 +303,13 @@ export default function NonogramPlayer(props: {
       )}
 
       {!props.readonly && (
-        <div className="game-status" style={{ textAlign: "center", marginBottom: 8 }}>
+        <div className="game-status">
           {saving ? "saving..." : solved ? "solved!" : "\u00A0"}
         </div>
       )}
 
       {!props.eligible && !props.readonly && (
-        <div className="muted" style={{ marginBottom: 8, fontSize: 12 }}>
+        <div className="hint" style={{ marginBottom: 8 }}>
           Not eligible for leaderboard (viewed replay).
         </div>
       )}
@@ -374,12 +374,11 @@ export default function NonogramPlayer(props: {
       </div>
 
       {!props.readonly && (
-        <div style={{ textAlign: "center", marginTop: 12 }}>
+        <div className="check-area">
           <button
-            className="btn primary"
+            className="btn primary lg"
             disabled={saving || solved}
             onClick={() => void finishAttempt(false)}
-            style={{ padding: "10px 24px", fontSize: 15 }}
           >
             {solved ? "Solved!" : "Check Solution"}
           </button>

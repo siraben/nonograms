@@ -343,7 +343,7 @@ function AuthCard(props: {
   }
 
   return (
-    <div className="card" style={{ maxWidth: 400, margin: "0 auto" }}>
+    <div className="card card-narrow">
       <h2>{props.mode === "login" ? "Login" : "Register"}</h2>
       <form onSubmit={submit}>
         <div className="field">
@@ -379,20 +379,20 @@ function AuthCard(props: {
             <label>Captcha</label>
             {(import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
               <>
-                <div id="turnstile" style={{ minHeight: 70 }} />
-                <div className="muted" style={{ fontSize: 12 }}>
+                <div id="turnstile" className="turnstile-wrap" />
+                <div className="hint">
                   {captchaReady ? "Verified" : "Pending..."}
                 </div>
               </>
             ) : (
-              <div className="muted" style={{ fontSize: 12 }}>
+              <div className="hint">
                 Captcha disabled in dev
               </div>
             )}
           </div>
         )}
         {props.mode === "login" && (
-          <label className="row muted" style={{ marginBottom: 12, fontSize: 13 }}>
+          <label className="row muted remember-field">
             <input
               type="checkbox"
               checked={remember}
@@ -465,57 +465,45 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
 
   return (
     <>
-      <div className="card" style={{ textAlign: "center" }}>
-        <div className="row" style={{ justifyContent: "center", gap: 12 }}>
+      <div className="card text-center">
+        <div className="btn-group">
           <button
-            className="btn primary"
-            style={{ fontSize: 16, padding: "12px 28px" }}
+            className="btn primary lg"
             onClick={() => void newGame(undefined, 5)}
           >
             New 5x5
           </button>
           <button
-            className="btn primary"
-            style={{ fontSize: 16, padding: "12px 28px" }}
+            className="btn primary lg"
             onClick={() => void newGame(undefined, 10)}
           >
             New 10x10
           </button>
         </div>
-        <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+        <div className="hint" style={{ marginTop: 8 }}>
           Viewing a replay disqualifies you from that puzzle's leaderboard.
         </div>
       </div>
 
       <div className="card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 10,
-          }}
-        >
-          <h2 style={{ margin: 0 }}>Leaderboard</h2>
-          <div className="row" style={{ gap: 6 }}>
+        <div className="card-header-row">
+          <h2>Leaderboard</h2>
+          <div className="row">
             <button
-              className="btn"
-              style={{ fontSize: 12, padding: "4px 10px", opacity: lbSize === 5 ? 1 : 0.7 }}
+              className={`btn sm${lbSize === 5 ? " selected" : ""}`}
               onClick={() => setLbSize(5)}
             >
               5x5
             </button>
             <button
-              className="btn"
-              style={{ fontSize: 12, padding: "4px 10px", opacity: lbSize === 10 ? 1 : 0.7 }}
+              className={`btn sm${lbSize === 10 ? " selected" : ""}`}
               onClick={() => setLbSize(10)}
             >
               10x10
             </button>
             <button
-              className="btn"
+              className="btn sm"
               onClick={() => void refreshLeader()}
-              style={{ fontSize: 12, padding: "4px 10px" }}
             >
               refresh
             </button>
@@ -530,7 +518,7 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
             {leader.map((e, i) => (
               <div key={e.attemptId} className="item">
                 <div className="title">
-                  <span style={{ color: "var(--muted)", marginRight: 6 }}>#{i + 1}</span>
+                  <span className="muted" style={{ marginRight: 6 }}>#{i + 1}</span>
                   {e.username}
                   <span className="muted" style={{ marginLeft: 8 }}>
                     {(e.durationMs / 1000).toFixed(2)}s
@@ -540,17 +528,15 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
                   {e.width}x{e.height} {e.puzzleId.slice(0, 8)} &mdash;{" "}
                   {new Date(e.finishedAt).toLocaleDateString()}
                 </div>
-                <div className="row" style={{ marginTop: 6 }}>
+                <div className="row item-actions">
                   <button
-                    className="btn"
-                    style={{ fontSize: 12, padding: "4px 10px" }}
+                    className="btn sm"
                     onClick={() => void newGame(e.puzzleId)}
                   >
                     play
                   </button>
                   <button
-                    className="btn"
-                    style={{ fontSize: 12, padding: "4px 10px" }}
+                    className="btn sm"
                     onClick={() => nav(`/replay/${e.attemptId}`)}
                   >
                     replay
@@ -616,7 +602,7 @@ function Play(props: {
 
   return (
     <>
-      <div style={{ marginBottom: 8 }}>
+      <div className="back-nav">
         <button className="btn" onClick={() => nav("/")}>
           &larr; Back
         </button>
@@ -766,13 +752,13 @@ function Replay(props: {
 
   return (
     <>
-      <div style={{ marginBottom: 8 }}>
+      <div className="back-nav">
         <button className="btn" onClick={() => nav("/")}>
           &larr; Back
         </button>
       </div>
       <div className="card">
-        <div className="row" style={{ marginBottom: 10 }}>
+        <div className="row replay-controls">
           <button
             className="btn"
             onClick={() => (playing ? pause() : play())}
@@ -783,7 +769,7 @@ function Replay(props: {
           <button className="btn" onClick={() => applyTo(0)} disabled={!moves.length}>
             Reset
           </button>
-          <span className="muted" style={{ fontSize: 13 }}>
+          <span className="muted">
             {meta ? (
               <>
                 {meta.username} &mdash;{" "}
@@ -796,7 +782,7 @@ function Replay(props: {
             )}
           </span>
         </div>
-        <div className="muted" style={{ marginBottom: 8, fontSize: 12 }}>
+        <div className="hint" style={{ marginBottom: 8 }}>
           Viewing a replay disqualifies future leaderboard runs for this puzzle.
         </div>
         {puzzle && (
