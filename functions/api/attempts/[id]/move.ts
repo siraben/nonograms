@@ -18,7 +18,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
 
   const idx = body.idx | 0;
   const st = body.state | 0;
-  if (idx < 0 || idx >= 100) return err(400, "bad idx");
   if (![0, 1, 2].includes(st)) return err(400, "bad state");
 
   const row = await env.DB.prepare(
@@ -35,7 +34,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
 
   // Update state.
   const state: number[] = JSON.parse(row.stateJson);
-  if (state.length !== 100) return err(500, "bad stored state");
+  const n = state.length | 0;
+  if (n <= 0) return err(500, "bad stored state");
+  if (idx < 0 || idx >= n) return err(400, "bad idx");
   state[idx] = st;
 
   // Seq number.
