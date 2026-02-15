@@ -31,6 +31,16 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [busy, setBusy] = useState(true);
   const [toast, setToast] = useState<{ kind: "ok" | "bad"; msg: string } | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const saved = localStorage.getItem("nonogram-theme");
+    if (saved === "dark" || saved === "light") return saved;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("nonogram-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     const onHash = () => setRoute(parseRoute());
@@ -41,8 +51,7 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const u = await Auth.me();
-        setUser(u);
+        setUser(await Auth.me());
       } finally {
         setBusy(false);
       }
@@ -65,62 +74,61 @@ export default function App() {
   return (
     <div className="shell">
       <div className="topbar">
-        <div className="brand">
+        <div className="brand" onClick={() => nav("/")}>
           <h1>nonogram</h1>
           <div className="tag">friends-only puzzle room</div>
         </div>
         <div className="row">
-          {user ? (
+          <button
+            className="theme-toggle"
+            onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
+          >
+            {theme === "light" ? "dark" : "light"}
+          </button>
+          {user && (
             <>
-              <div className="pill">
-                <span className="muted">user</span>
-                <span>{user.username}</span>
-              </div>
+              <div className="pill">{user.username}</div>
               <button className="btn danger" onClick={doLogout}>
                 logout
               </button>
             </>
-          ) : (
-            <div className="pill muted">not logged in</div>
           )}
         </div>
       </div>
 
-      {toast ? <div className={`toast ${toast.kind}`}>{toast.msg}</div> : null}
+      {toast && <div className={`toast ${toast.kind}`}>{toast.msg}</div>}
 
-      {authedRoute.name === "login" ? (
+      {authedRoute.name === "login" && (
         <AuthCard
           mode="login"
           onAuthed={async () => {
-            const u = await Auth.me();
-            setUser(u);
+            setUser(await Auth.me());
             nav("/");
           }}
           onToast={setToast}
         />
-      ) : null}
+      )}
 
-      {authedRoute.name === "register" ? (
+      {authedRoute.name === "register" && (
         <AuthCard
           mode="register"
           onAuthed={async () => {
-            const u = await Auth.me();
-            setUser(u);
+            setUser(await Auth.me());
             nav("/");
           }}
           onToast={setToast}
         />
-      ) : null}
+      )}
 
-      {authedRoute.name === "home" ? <Home onToast={setToast} /> : null}
+      {authedRoute.name === "home" && <Home onToast={setToast} />}
 
-      {authedRoute.name === "play" ? (
+      {authedRoute.name === "play" && (
         <Play attemptId={authedRoute.attemptId} onToast={setToast} />
-      ) : null}
+      )}
 
-      {authedRoute.name === "replay" ? (
+      {authedRoute.name === "replay" && (
         <Replay attemptId={authedRoute.attemptId} onToast={setToast} />
-      ) : null}
+      )}
     </div>
   );
 }
@@ -134,7 +142,7 @@ function AuthCard(props: {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>("");
+  const [captchaToken, setCaptchaToken] = useState("");
   const [captchaReady, setCaptchaReady] = useState(false);
 
   useEffect(() => {
@@ -156,7 +164,7 @@ function AuthCard(props: {
       el.innerHTML = "";
       widgetId = t.render(el, {
         sitekey: siteKey,
-        theme: "dark",
+        theme: "auto" as any,
         callback: (token) => {
           setCaptchaToken(token);
           setCaptchaReady(true);
@@ -165,7 +173,7 @@ function AuthCard(props: {
           setCaptchaToken("");
           setCaptchaReady(false);
           if (widgetId) t.reset(widgetId);
-        }
+        },
       });
     };
 
@@ -187,10 +195,13 @@ function AuthCard(props: {
         await Auth.login(username, password, remember);
       } else {
         const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
-        if (siteKey && !captchaToken) throw new Error("complete captcha");
+        if (siteKey && !captchaToken) throw new Error("Complete captcha first");
         await Auth.register(username, password, captchaToken);
       }
-      props.onToast({ kind: "ok", msg: props.mode === "login" ? "logged in" : "account created" });
+      props.onToast({
+        kind: "ok",
+        msg: props.mode === "login" ? "Logged in" : "Account created",
+      });
       props.onAuthed();
     } catch (err) {
       props.onToast({ kind: "bad", msg: (err as Error).message });
@@ -200,88 +211,89 @@ function AuthCard(props: {
   }
 
   return (
-    <div className="grid2">
-      <div className="card">
-        <h2>{props.mode === "login" ? "Login" : "Register"}</h2>
-        <form onSubmit={submit}>
+    <div className="card" style={{ maxWidth: 400, margin: "0 auto" }}>
+      <h2>{props.mode === "login" ? "Login" : "Register"}</h2>
+      <form onSubmit={submit}>
+        <div className="field">
+          <label>Username</label>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+          />
+        </div>
+        <div className="field">
+          <label>Password</label>
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            autoComplete={props.mode === "login" ? "current-password" : "new-password"}
+          />
+        </div>
+        {props.mode === "register" && (
           <div className="field">
-            <label>username</label>
-            <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
-          </div>
-          <div className="field">
-            <label>password</label>
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              autoComplete={props.mode === "login" ? "current-password" : "new-password"}
-            />
-          </div>
-          {props.mode === "register" ? (
-            <div className="field">
-              <label className="row">
-                <span>captcha</span>
-                <span className="muted">(turnstile)</span>
-              </label>
-              <div id="turnstile" style={{ minHeight: 70 }} />
-              {(import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
-                <div className="muted">{captchaReady ? "ok" : "pending..."}</div>
-              ) : (
-                <div className="muted">VITE_TURNSTILE_SITE_KEY not set (captcha disabled in dev)</div>
-              )}
-            </div>
-          ) : null}
-          {props.mode === "login" ? (
-            <label className="row muted" style={{ marginBottom: 10 }}>
-              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-              remember me
-            </label>
-          ) : null}
-
-          <div className="row">
-            <button
-              className="btn primary"
-              disabled={
-                submitting ||
-                (props.mode === "register" && Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) && !captchaReady)
-              }
-            >
-              {props.mode === "login" ? "login" : "create account"}
-            </button>
-            {props.mode === "login" ? (
-              <button type="button" className="btn" onClick={() => nav("/register")}>
-                register
-              </button>
+            <label>Captcha</label>
+            <div id="turnstile" style={{ minHeight: 70 }} />
+            {(import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
+              <div className="muted" style={{ fontSize: 12 }}>
+                {captchaReady ? "Verified" : "Pending..."}
+              </div>
             ) : (
-              <button type="button" className="btn" onClick={() => nav("/login")}>
-                back to login
-              </button>
+              <div className="muted" style={{ fontSize: 12 }}>
+                Captcha disabled in dev
+              </div>
             )}
           </div>
-        </form>
-      </div>
-
-	      <div className="card">
-	        <h2>Notes</h2>
-	        <div className="muted">
-	          <div>Passwords are stored as salted PBKDF2 hashes.</div>
-	        </div>
-	      </div>
+        )}
+        {props.mode === "login" && (
+          <label className="row muted" style={{ marginBottom: 12, fontSize: 13 }}>
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            Remember me
+          </label>
+        )}
+        <div className="row">
+          <button
+            className="btn primary"
+            disabled={
+              submitting ||
+              (props.mode === "register" &&
+                Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) &&
+                !captchaReady)
+            }
+          >
+            {props.mode === "login" ? "Login" : "Create Account"}
+          </button>
+          {props.mode === "login" ? (
+            <button type="button" className="btn" onClick={() => nav("/register")}>
+              Register
+            </button>
+          ) : (
+            <button type="button" className="btn" onClick={() => nav("/login")}>
+              Back to Login
+            </button>
+          )}
+        </div>
+      </form>
     </div>
   );
 }
 
 function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
   const [leader, setLeader] = useState<LeaderboardEntry[]>([]);
-  const [loadingLeader, setLoadingLeader] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   async function refreshLeader() {
-    setLoadingLeader(true);
+    setLoading(true);
     try {
       const r = await api<{ leaderboard: LeaderboardEntry[] }>("/api/leaderboard");
       setLeader(r.leaderboard);
     } finally {
-      setLoadingLeader(false);
+      setLoading(false);
     }
   }
 
@@ -292,7 +304,10 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
   async function newGame(puzzleId?: string) {
     props.onToast(null);
     try {
-      const r = await api<{ attempt: { id: string } }>("/api/attempts/new", { method: "POST", json: puzzleId ? { puzzleId } : {} });
+      const r = await api<{ attempt: { id: string } }>("/api/attempts/new", {
+        method: "POST",
+        json: puzzleId ? { puzzleId } : {},
+      });
       nav(`/a/${r.attempt.id}`);
     } catch (err) {
       props.onToast({ kind: "bad", msg: (err as Error).message });
@@ -300,56 +315,86 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
   }
 
   return (
-    <div className="grid2">
-      <div className="card">
-        <h2>Play</h2>
-        <div className="row">
-          <button className="btn primary" onClick={() => void newGame()}>
-            new random 10x10
-          </button>
-        </div>
-        <div className="muted" style={{ marginTop: 10 }}>
-          Leaderboard runs are disabled if you have viewed a replay for that puzzle.
+    <>
+      <div className="card" style={{ textAlign: "center" }}>
+        <button
+          className="btn primary"
+          style={{ fontSize: 16, padding: "12px 28px" }}
+          onClick={() => void newGame()}
+        >
+          New Random 10x10
+        </button>
+        <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+          Viewing a replay disqualifies you from that puzzle's leaderboard.
         </div>
       </div>
 
       <div className="card">
-        <h2>Leaderboard</h2>
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <div className="muted">{loadingLeader ? "loading..." : `${leader.length} runs`}</div>
-          <button className="btn" onClick={() => void refreshLeader()}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 10,
+          }}
+        >
+          <h2 style={{ margin: 0 }}>Leaderboard</h2>
+          <button
+            className="btn"
+            onClick={() => void refreshLeader()}
+            style={{ fontSize: 12, padding: "4px 10px" }}
+          >
             refresh
           </button>
         </div>
-        <div className="list" style={{ marginTop: 10 }}>
-          {leader.map((e) => (
-            <div key={e.attemptId} className="item">
-              <div className="title">
-                {e.username}{" "}
-                <span className="muted">
-                  {(e.durationMs / 1000).toFixed(2)}s
-                </span>
+        {loading ? (
+          <div className="muted">Loading...</div>
+        ) : leader.length === 0 ? (
+          <div className="muted">No runs yet. Be the first!</div>
+        ) : (
+          <div className="list">
+            {leader.map((e, i) => (
+              <div key={e.attemptId} className="item">
+                <div className="title">
+                  <span style={{ color: "var(--muted)", marginRight: 6 }}>#{i + 1}</span>
+                  {e.username}
+                  <span className="muted" style={{ marginLeft: 8 }}>
+                    {(e.durationMs / 1000).toFixed(2)}s
+                  </span>
+                </div>
+                <div className="meta">
+                  puzzle {e.puzzleId.slice(0, 8)} &mdash;{" "}
+                  {new Date(e.finishedAt).toLocaleDateString()}
+                </div>
+                <div className="row" style={{ marginTop: 6 }}>
+                  <button
+                    className="btn"
+                    style={{ fontSize: 12, padding: "4px 10px" }}
+                    onClick={() => void newGame(e.puzzleId)}
+                  >
+                    play
+                  </button>
+                  <button
+                    className="btn"
+                    style={{ fontSize: 12, padding: "4px 10px" }}
+                    onClick={() => nav(`/replay/${e.attemptId}`)}
+                  >
+                    replay
+                  </button>
+                </div>
               </div>
-              <div className="meta">
-                puzzle {e.puzzleId.slice(0, 8)} · finished {new Date(e.finishedAt).toLocaleString()}
-              </div>
-              <div className="row" style={{ marginTop: 10 }}>
-                <button className="btn" onClick={() => void newGame(e.puzzleId)}>
-                  play this puzzle
-                </button>
-                <button className="btn" onClick={() => nav(`/replay/${e.attemptId}`)}>
-                  view replay
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
 
-function Play(props: { attemptId: string; onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
+function Play(props: {
+  attemptId: string;
+  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+}) {
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [loading, setLoading] = useState(true);
@@ -358,7 +403,9 @@ function Play(props: { attemptId: string; onToast: (t: { kind: "ok" | "bad"; msg
     (async () => {
       setLoading(true);
       try {
-        const r = await api<{ puzzle: Puzzle; attempt: Attempt }>(`/api/attempts/${encodeURIComponent(props.attemptId)}`);
+        const r = await api<{ puzzle: Puzzle; attempt: Attempt }>(
+          `/api/attempts/${encodeURIComponent(props.attemptId)}`
+        );
         setPuzzle(r.puzzle);
         setAttempt(r.attempt);
       } catch (err) {
@@ -370,39 +417,41 @@ function Play(props: { attemptId: string; onToast: (t: { kind: "ok" | "bad"; msg
   }, [props.attemptId]);
 
   return (
-    <div className="grid2">
-      <div className="card">
-        <h2>Navigation</h2>
-        <div className="row">
-          <button className="btn" onClick={() => nav("/")}>
-            back
-          </button>
-        </div>
+    <>
+      <div style={{ marginBottom: 8 }}>
+        <button className="btn" onClick={() => nav("/")}>
+          &larr; Back
+        </button>
       </div>
       <div className="card">
-        <h2>Play</h2>
-        {loading ? <div className="muted">loading...</div> : null}
-        {puzzle && attempt ? (
+        {loading && <div className="muted">Loading puzzle...</div>}
+        {puzzle && attempt && (
           <NonogramPlayer
             attemptId={attempt.id}
             eligible={attempt.eligible}
             puzzle={puzzle}
             initialState={attempt.state}
+            startedAt={attempt.startedAt}
             onToast={props.onToast}
           />
-        ) : null}
+        )}
       </div>
-    </div>
+    </>
   );
 }
 
-function Replay(props: { attemptId: string; onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
+function Replay(props: {
+  attemptId: string;
+  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+}) {
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [moves, setMoves] = useState<ReplayMove[]>([]);
   const [meta, setMeta] = useState<{ username: string; durationMs: number | null } | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [pos, setPos] = useState(0); // move index
-  const [state, setState] = useState<CellState[]>(Array.from({ length: 100 }, () => 0 as CellState));
+  const [pos, setPos] = useState(0);
+  const [state, setState] = useState<CellState[]>(
+    Array.from({ length: 100 }, () => 0 as CellState)
+  );
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -411,13 +460,17 @@ function Replay(props: { attemptId: string; onToast: (t: { kind: "ok" | "bad"; m
       setPos(0);
       if (timer.current) window.clearInterval(timer.current);
       try {
-        const r = await api<{ puzzle: Puzzle; moves: ReplayMove[]; attempt: { username: string; durationMs: number | null } }>(
-          `/api/replay/${encodeURIComponent(props.attemptId)}`
-        );
+        const r = await api<{
+          puzzle: Puzzle;
+          moves: ReplayMove[];
+          attempt: { username: string; durationMs: number | null };
+        }>(`/api/replay/${encodeURIComponent(props.attemptId)}`);
         setPuzzle(r.puzzle);
         setMoves(r.moves);
         setMeta({ username: r.attempt.username, durationMs: r.attempt.durationMs });
-        setState(Array.from({ length: r.puzzle.width * r.puzzle.height }, () => 0 as CellState));
+        setState(
+          Array.from({ length: r.puzzle.width * r.puzzle.height }, () => 0 as CellState)
+        );
       } catch (err) {
         props.onToast({ kind: "bad", msg: (err as Error).message });
       }
@@ -429,7 +482,10 @@ function Replay(props: { attemptId: string; onToast: (t: { kind: "ok" | "bad"; m
 
   function applyTo(k: number) {
     if (!puzzle) return;
-    const next = Array.from({ length: puzzle.width * puzzle.height }, () => 0 as CellState);
+    const next = Array.from(
+      { length: puzzle.width * puzzle.height },
+      () => 0 as CellState
+    );
     for (let i = 0; i < k; i++) {
       const m = moves[i];
       if (!m) break;
@@ -461,46 +517,50 @@ function Replay(props: { attemptId: string; onToast: (t: { kind: "ok" | "bad"; m
   }
 
   return (
-    <div className="grid2">
-      <div className="card">
-        <h2>Replay</h2>
-        <div className="row">
-          <button className="btn" onClick={() => nav("/")}>
-            back
-          </button>
-          <button className="btn" onClick={() => (playing ? pause() : play())} disabled={!moves.length}>
-            {playing ? "pause" : "play"}
-          </button>
-          <button className="btn" onClick={() => applyTo(0)} disabled={!moves.length}>
-            reset
-          </button>
-        </div>
-        <div className="muted" style={{ marginTop: 10 }}>
-          {meta ? (
-            <>
-              {meta.username} · {meta.durationMs ? `${(meta.durationMs / 1000).toFixed(2)}s` : "?"} · moves {pos}/{moves.length}
-            </>
-          ) : (
-            "loading..."
-          )}
-        </div>
-        <div className="muted" style={{ marginTop: 10 }}>
-          Viewing a replay disqualifies you from leaderboard runs for this puzzle.
-        </div>
+    <>
+      <div style={{ marginBottom: 8 }}>
+        <button className="btn" onClick={() => nav("/")}>
+          &larr; Back
+        </button>
       </div>
       <div className="card">
-        <h2>Board</h2>
-        {puzzle ? (
+        <div className="row" style={{ marginBottom: 10 }}>
+          <button
+            className="btn"
+            onClick={() => (playing ? pause() : play())}
+            disabled={!moves.length}
+          >
+            {playing ? "Pause" : "Play"}
+          </button>
+          <button className="btn" onClick={() => applyTo(0)} disabled={!moves.length}>
+            Reset
+          </button>
+          <span className="muted" style={{ fontSize: 13 }}>
+            {meta ? (
+              <>
+                {meta.username} &mdash;{" "}
+                {meta.durationMs ? `${(meta.durationMs / 1000).toFixed(2)}s` : "?"} &mdash;{" "}
+                {pos}/{moves.length} moves
+              </>
+            ) : (
+              "Loading..."
+            )}
+          </span>
+        </div>
+        <div className="muted" style={{ marginBottom: 8, fontSize: 12 }}>
+          Viewing a replay disqualifies future leaderboard runs for this puzzle.
+        </div>
+        {puzzle && (
           <NonogramPlayer
-            attemptId={"_replay"}
+            attemptId="_replay"
             eligible={false}
             puzzle={puzzle}
             initialState={state}
             readonly
             onToast={props.onToast}
           />
-        ) : null}
+        )}
       </div>
-    </div>
+    </>
   );
 }
