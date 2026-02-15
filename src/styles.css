@@ -258,6 +258,20 @@ a {
   border-color: var(--accent);
 }
 
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.icon-btn svg {
+  display: block;
+}
+
 .nonogram-wrap {
   overflow: auto;
   padding: 4px;

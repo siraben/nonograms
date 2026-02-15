@@ -26,6 +26,78 @@ function nav(to: string) {
   location.hash = to;
 }
 
+function SunIcon(props: { title?: string }) {
+  return (
+    <svg
+      aria-hidden={props.title ? undefined : true}
+      role={props.title ? "img" : "presentation"}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      {props.title ? <title>{props.title}</title> : null}
+      <path
+        d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MoonIcon(props: { title?: string }) {
+  return (
+    <svg
+      aria-hidden={props.title ? undefined : true}
+      role={props.title ? "img" : "presentation"}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      {props.title ? <title>{props.title}</title> : null}
+      <path
+        d="M21 14.2A8.6 8.6 0 0 1 9.8 3a7.2 7.2 0 1 0 11.2 11.2Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Based on Lucide "circle-help" (ISC license): https://lucide.dev/icons/circle-help
+function HelpIcon(props: { title?: string }) {
+  return (
+    <svg
+      aria-hidden={props.title ? undefined : true}
+      role={props.title ? "img" : "presentation"}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      {props.title ? <title>{props.title}</title> : null}
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M12 17h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute());
   const [user, setUser] = useState<User | null>(null);
@@ -90,13 +162,20 @@ export default function App() {
         </div>
         <div className="row">
           <button
-            className="theme-toggle"
+            className="theme-toggle icon-btn"
             onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
+            aria-label="Toggle theme"
+            title="Toggle theme"
           >
-            {theme === "light" ? "dark" : "light"}
+            {theme === "light" ? <SunIcon /> : <MoonIcon />}
           </button>
-          <button className="theme-toggle" onClick={() => setHelpOpen(true)}>
-            help
+          <button
+            className="theme-toggle icon-btn"
+            onClick={() => setHelpOpen(true)}
+            aria-label="Help"
+            title="Help"
+          >
+            <HelpIcon />
           </button>
           {user && (
             <>
