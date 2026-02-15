@@ -164,11 +164,11 @@ export default function NonogramPlayer(props: {
         solved: boolean;
         durationMs?: number;
         eligible?: boolean;
-        wrongFilled?: number;
-        missingFilled?: number;
+        wrongRows?: number;
+        wrongCols?: number;
       }>(
         `/api/attempts/${encodeURIComponent(props.attemptId)}/finish`,
-        { method: "POST", json: { state } }
+        { method: "POST" }
       );
       if (r.solved) {
         stopTimer();
@@ -180,7 +180,7 @@ export default function NonogramPlayer(props: {
       } else if (!auto) {
         props.onToast({
           kind: "bad",
-          msg: `Not solved. Wrong: ${r.wrongFilled || 0}, Missing: ${r.missingFilled || 0}`,
+          msg: `Not solved. Wrong rows: ${r.wrongRows || 0}, Wrong cols: ${r.wrongCols || 0}`,
         });
       }
     } catch (err) {
