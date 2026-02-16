@@ -248,6 +248,12 @@ a {
   }
 }
 
+@media (max-width: 480px) {
+  :root {
+    --cell-size: 24px;
+  }
+}
+
 .item {
   padding: 10px;
   border: 1px solid var(--border);
@@ -316,8 +322,8 @@ a {
 .cell,
 .clue,
 .clue-empty {
-  width: 28px;
-  height: 28px;
+  width: var(--cell-size, 28px);
+  height: var(--cell-size, 28px);
   display: grid;
   place-items: center;
   font-size: 12px;
@@ -615,8 +621,8 @@ a {
 }
 
 .start-cell {
-  width: 28px;
-  height: 28px;
+  width: var(--cell-size, 28px);
+  height: var(--cell-size, 28px);
   border: 1px solid var(--cell-border);
   background: var(--cell-bg);
 }

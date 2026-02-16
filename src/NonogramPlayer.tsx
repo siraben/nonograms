@@ -335,7 +335,7 @@ export default function NonogramPlayer(props: {
       }
     }
 
-    return { gridTemplateColumns: `repeat(${cols}, 28px)`, cells: items };
+    return { gridTemplateColumns: `repeat(${cols}, var(--cell-size, 28px))`, cells: items };
   }, [puzzle, state]);
 
   return (
@@ -350,7 +350,7 @@ export default function NonogramPlayer(props: {
         </div>
       )}
 
-      {!props.eligible && !props.readonly && (
+      {!props.eligible && !props.readonly && !props.offline && (
         <div className="hint" style={{ marginBottom: 8 }}>
           You've watched a replay of this puzzle, so your time won't appear on the leaderboard.
         </div>

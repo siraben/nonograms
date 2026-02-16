@@ -1068,7 +1068,7 @@ function Play(props: {
         {notStarted && dims && (
           <div className="start-gate">
             <div className="start-grid" style={{
-              gridTemplateColumns: `repeat(${dims.width}, 28px)`,
+              gridTemplateColumns: `repeat(${dims.width}, var(--cell-size, 28px))`,
             }}>
               {Array.from({ length: dims.width * dims.height }, (_, i) => (
                 <div key={i} className="start-cell" />
