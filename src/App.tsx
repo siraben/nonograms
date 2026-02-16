@@ -12,6 +12,7 @@ type Route =
   | { name: "login" }
   | { name: "register" }
   | { name: "home" }
+  | { name: "admin" }
   | { name: "play"; attemptId: string }
   | { name: "replay"; attemptId: string }
   | { name: "offline-play"; size: number };
@@ -27,6 +28,7 @@ function parseRoute(): Route {
   const parts = h.split("/").filter(Boolean);
   if (parts[0] === "login") return { name: "login" };
   if (parts[0] === "register") return { name: "register" };
+  if (parts[0] === "admin") return { name: "admin" };
   if (parts[0] === "a" && parts[1]) return { name: "play", attemptId: parts[1] };
   if (parts[0] === "replay" && parts[1]) return { name: "replay", attemptId: parts[1] };
   if (parts[0] === "offline" && parts[1]) {
@@ -299,6 +301,7 @@ export default function App() {
     if (busy) return route;
     if (!user && route.name !== "login" && route.name !== "register" && route.name !== "offline-play" && route.name !== "replay") return { name: "login" } as Route;
     if (user && (route.name === "login" || route.name === "register")) return { name: "home" } as Route;
+    if (route.name === "admin" && (!user || !user.isAdmin)) return { name: "home" } as Route;
     return route;
   }, [busy, route, user]);
 
@@ -335,6 +338,11 @@ export default function App() {
           {!online && <div className="pill pill-muted">offline</div>}
           {user && (
             <>
+              {user.isAdmin && (
+                <button className="btn sm" onClick={() => nav("/admin")}>
+                  admin
+                </button>
+              )}
               <div className="pill">{user.username}</div>
               <button className="btn danger" onClick={doLogout}>
                 logout
@@ -450,6 +458,8 @@ export default function App() {
           onToast={setToast}
         />
       )}
+
+      {authedRoute.name === "admin" && <AdminDashboard onToast={setToast} />}
 
       {authedRoute.name === "home" && <Home online={online} onToast={setToast} />}
 
@@ -1105,6 +1115,198 @@ function Replay(props: {
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+type AdminStats = {
+  totalUsers: number;
+  totalPuzzles: number;
+  totalCompleted: number;
+  inProgress: number;
+  activeSessions: number;
+  recentSignups: { id: string; username: string; createdAt: string }[];
+  recentCompletions: { attemptId: string; username: string; durationMs: number; finishedAt: string; width: number; height: number }[];
+};
+
+type InviteCode = {
+  id: string;
+  createdAt: string;
+  expiresAt: string | null;
+  maxUses: number | null;
+  uses: number;
+  disabled: boolean;
+};
+
+function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [invites, setInvites] = useState<InviteCode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newCode, setNewCode] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [s, inv] = await Promise.all([
+        api<AdminStats>("/api/admin/stats"),
+        api<{ invites: InviteCode[] }>("/api/admin/invites"),
+      ]);
+      setStats(s);
+      setInvites(inv.invites);
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void loadData(); }, []);
+
+  async function createInvite(e: React.FormEvent) {
+    e.preventDefault();
+    props.onToast(null);
+    setCreating(true);
+    try {
+      const body: Record<string, unknown> = {};
+      if (newCode.trim()) body.code = newCode.trim();
+      const r = await api<{ invite: { id: string; code: string } }>("/api/admin/invites", {
+        method: "POST",
+        json: body,
+      });
+      props.onToast({ kind: "ok", msg: `Created invite: ${r.invite.code}` });
+      setNewCode("");
+      void loadData();
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function disableInvite(id: string) {
+    props.onToast(null);
+    try {
+      await api("/api/admin/invites", { method: "PUT", json: { id } });
+      props.onToast({ kind: "ok", msg: "Invite disabled" });
+      void loadData();
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    }
+  }
+
+  return (
+    <>
+      <div className="back-nav">
+        <button className="btn" onClick={() => nav("/")}>
+          &larr; Back
+        </button>
+      </div>
+
+      <div className="card">
+        <h2>Admin Dashboard</h2>
+        {loading ? (
+          <div className="muted">Loading...</div>
+        ) : stats ? (
+          <div className="admin-stats-grid">
+            {([
+              ["Users", stats.totalUsers],
+              ["Puzzles", stats.totalPuzzles],
+              ["Completed", stats.totalCompleted],
+              ["In Progress", stats.inProgress],
+              ["Active Sessions", stats.activeSessions],
+            ] as const).map(([label, value]) => (
+              <div key={label} className="admin-stat">
+                <div className="admin-stat-value">{value}</div>
+                <div className="admin-stat-label">{label}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {stats && (
+        <>
+          <div className="card">
+            <h2>Recent Signups</h2>
+            {stats.recentSignups.length === 0 ? (
+              <div className="muted">No signups yet</div>
+            ) : (
+              <div className="list">
+                {stats.recentSignups.map((u) => (
+                  <div key={u.id} className="item">
+                    <div className="title">{u.username}</div>
+                    <div className="meta">{fmtTime(u.createdAt)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <h2>Recent Completions</h2>
+            {stats.recentCompletions.length === 0 ? (
+              <div className="muted">No completions yet</div>
+            ) : (
+              <div className="list">
+                {stats.recentCompletions.map((c) => (
+                  <div key={c.attemptId} className="item">
+                    <div className="title">
+                      {c.username}
+                      <span className="muted" style={{ marginLeft: 8 }}>
+                        {(c.durationMs / 1000).toFixed(2)}s
+                      </span>
+                    </div>
+                    <div className="meta">
+                      {c.width}x{c.height} &mdash; {fmtTime(c.finishedAt)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      <div className="card">
+        <h2>Invite Codes</h2>
+        <form className="admin-invite-form" onSubmit={createInvite}>
+          <input
+            className="admin-input"
+            value={newCode}
+            onChange={(e) => setNewCode(e.target.value)}
+            placeholder="Custom code (leave blank for random)"
+          />
+          <button className="btn primary sm" disabled={creating}>
+            {creating ? "Creating..." : "Create"}
+          </button>
+        </form>
+        {invites.length === 0 ? (
+          <div className="muted" style={{ marginTop: 8 }}>No invite codes</div>
+        ) : (
+          <div className="list" style={{ marginTop: 8 }}>
+            {invites.map((inv) => (
+              <div key={inv.id} className="item">
+                <div className="title">
+                  {inv.id.slice(0, 8)}
+                  {inv.disabled && <span className="muted" style={{ marginLeft: 8 }}>(disabled)</span>}
+                </div>
+                <div className="meta">
+                  Uses: {inv.uses}{inv.maxUses != null ? `/${inv.maxUses}` : ""} &mdash; {fmtTime(inv.createdAt)}
+                  {inv.expiresAt && <> &mdash; expires {fmtTime(inv.expiresAt)}</>}
+                </div>
+                {!inv.disabled && (
+                  <div className="row item-actions">
+                    <button className="btn sm danger" onClick={() => disableInvite(inv.id)}>
+                      disable
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
