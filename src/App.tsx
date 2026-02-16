@@ -788,6 +788,23 @@ function Play(props: {
     }
   }
 
+  // Abandon attempt on page unload (close tab, navigate away)
+  useEffect(() => {
+    if (!attempt?.startedAt || attempt.completed) return;
+    const url = `/api/attempts/${encodeURIComponent(props.attemptId)}/abandon`;
+    const onUnload = () => navigator.sendBeacon(url);
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, [props.attemptId, attempt?.startedAt, attempt?.completed]);
+
+  // Abandon attempt on SPA navigation away from play route
+  useEffect(() => {
+    if (!attempt?.startedAt || attempt.completed) return;
+    return () => {
+      navigator.sendBeacon(`/api/attempts/${encodeURIComponent(props.attemptId)}/abandon`);
+    };
+  }, [props.attemptId, attempt?.startedAt, attempt?.completed]);
+
   const notStarted = attempt && !attempt.startedAt;
 
   return (
