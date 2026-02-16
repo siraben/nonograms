@@ -1102,7 +1102,14 @@ function Replay(props: {
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                const idx = Math.round(pct * moves.length);
+                const totalMs = moves[moves.length - 1].atMs || 1;
+                const targetMs = pct * totalMs;
+                // Find closest move by time
+                let idx = 0;
+                for (let j = 0; j < moves.length; j++) {
+                  if (moves[j].atMs <= targetMs) idx = j + 1;
+                  else break;
+                }
                 if (playing) pause();
                 applyTo(idx);
               }}
@@ -1110,7 +1117,7 @@ function Replay(props: {
               <div className="scrubber-track">
                 <div
                   className="scrubber-fill"
-                  style={{ width: `${moves.length ? (pos / moves.length) * 100 : 0}%` }}
+                  style={{ width: `${pos > 0 ? (moves[pos - 1].atMs / (moves[moves.length - 1].atMs || 1)) * 100 : 0}%` }}
                 />
                 {moves.map((m, i) => {
                   const totalMs = moves[moves.length - 1].atMs || 1;
