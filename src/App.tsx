@@ -652,6 +652,11 @@ function PrivacyPolicy() {
         <ul>
           <li>Contact the site administrator to request deletion of your account and all associated data.</li>
         </ul>
+
+        <p style={{ marginTop: 12 }}><strong>Source code</strong></p>
+        <ul>
+          <li><a href="https://github.com/siraben/nonograms" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>github.com/siraben/nonograms</a></li>
+        </ul>
       </div>
       <div style={{ marginTop: 12 }}>
         <button className="btn" onClick={() => history.back()}>&larr; Back</button>
