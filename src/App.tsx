@@ -707,6 +707,10 @@ function PublicLeaderboard() {
               </div>
             </div>
           ))}
+          <div className="item blurred-item" aria-hidden="true" onClick={() => setSignupPrompt(true)}>
+            <div className="title">#4 Mysterious Player <span className="muted" style={{ marginLeft: 8 }}>??:??s</span></div>
+            <div className="meta">Sign up to see more</div>
+          </div>
         </div>
       )}
     </div>
