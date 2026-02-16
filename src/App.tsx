@@ -736,7 +736,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
           ) : leader.length === 0 ? (
             <div className="muted">No runs yet. Be the first!</div>
           ) : (
-            <div className="list">
+            <div className="list list-2col">
               {leader.map((e, i) => (
                 <div key={e.attemptId} className="item">
                   <div className="title">
@@ -761,7 +761,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
                       className="btn sm"
                       onClick={() => nav(`/replay/${e.attemptId}`)}
                     >
-                      replay
+                      watch replay
                     </button>
                   </div>
                 </div>

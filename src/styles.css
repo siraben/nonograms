@@ -231,6 +231,16 @@ a {
   gap: 6px;
 }
 
+.list-2col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 480px) {
+  .list-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
 .item {
   padding: 10px;
   border: 1px solid var(--border);
