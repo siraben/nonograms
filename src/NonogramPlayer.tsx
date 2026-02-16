@@ -63,7 +63,10 @@ export default function NonogramPlayer(props: {
   const stateRef = useRef(state);
   stateRef.current = state;
   const inFlight = useRef(0);
-  const pendingMoves = useRef<Promise<unknown>[]>([]);
+  const pendingFlushes = useRef<Promise<unknown>[]>([]);
+  const moveBuffer = useRef<{ idx: number; state: CellState; atMs: number }[]>([]);
+  const flushTimer = useRef<number | null>(null);
+  const startMs = useRef(0);
   const timerRef = useRef<number | null>(null);
   const dragging = useRef(false);
   const paintValue = useRef<CellState>(0);
@@ -74,12 +77,15 @@ export default function NonogramPlayer(props: {
     setState(props.initialState);
     setSolved(false);
     finishing.current = false;
+    moveBuffer.current = [];
+    if (flushTimer.current) { clearTimeout(flushTimer.current); flushTimer.current = null; }
   }, [props.attemptId, props.initialState]);
 
   // Timer — starts immediately since startedAt is set at attempt creation
   useEffect(() => {
     if (props.readonly || solved || !props.startedAt) return;
     const start = new Date(props.startedAt).getTime();
+    startMs.current = start;
     setElapsed(Date.now() - start);
     timerRef.current = window.setInterval(() => {
       setElapsed(Date.now() - start);
@@ -133,7 +139,7 @@ export default function NonogramPlayer(props: {
       next[idx] = newState;
       return next;
     });
-    void postMove(idx, newState);
+    queueMove(idx, newState);
   }
 
   // Mousedown on a cell: cycle it and start drag-painting
@@ -148,7 +154,7 @@ export default function NonogramPlayer(props: {
       next[idx] = newVal;
       return next;
     });
-    void postMove(idx, newVal);
+    queueMove(idx, newVal);
   }
 
   // Mouse enters cell while dragging: paint with same value
@@ -157,28 +163,43 @@ export default function NonogramPlayer(props: {
     applyCell(idx, paintValue.current);
   }
 
-  function postMove(idx: number, st: CellState) {
-    if (props.readonly || props.offline) return;
+  function flushMoves() {
+    if (flushTimer.current) { clearTimeout(flushTimer.current); flushTimer.current = null; }
+    const all = moveBuffer.current;
+    if (all.length === 0) return;
+    // Server accepts at most 50 moves per request; keep the rest buffered.
+    const batch = all.slice(0, 50);
+    moveBuffer.current = all.slice(50);
     inFlight.current++;
     setSaving(true);
     const p = api(
-      `/api/attempts/${encodeURIComponent(props.attemptId)}/move`,
-      { method: "POST", json: { idx, state: st } }
-    ).catch(async (err) => {
-      props.onToast({ kind: "bad", msg: (err as Error).message });
-      // Reconcile: refetch server state so client doesn't diverge
-      try {
-        const r = await api<{ attempt: { state: CellState[] } }>(
-          `/api/attempts/${encodeURIComponent(props.attemptId)}`
-        );
-        setState(r.attempt.state);
-      } catch { /* already showing error toast */ }
+      `/api/attempts/${encodeURIComponent(props.attemptId)}/moves`,
+      { method: "POST", json: { moves: batch } }
+    ).then(() => {
+      // If more moves remain, flush the next chunk immediately.
+      if (moveBuffer.current.length > 0 && !flushTimer.current) {
+        flushTimer.current = window.setTimeout(flushMoves, 0);
+      }
+    }).catch(() => {
+      // Put failed moves back at the front so they retry before newer moves.
+      moveBuffer.current = batch.concat(moveBuffer.current);
+      if (!flushTimer.current) {
+        flushTimer.current = window.setTimeout(flushMoves, 2000);
+      }
     }).finally(() => {
-      pendingMoves.current = pendingMoves.current.filter((x) => x !== p);
+      pendingFlushes.current = pendingFlushes.current.filter((x) => x !== p);
       inFlight.current--;
       if (inFlight.current <= 0) setSaving(false);
     });
-    pendingMoves.current.push(p);
+    pendingFlushes.current.push(p);
+  }
+
+  function queueMove(idx: number, st: CellState) {
+    if (props.readonly || props.offline) return;
+    const atMs = Math.max(0, Date.now() - startMs.current);
+    moveBuffer.current.push({ idx, state: st, atMs });
+    if (flushTimer.current) clearTimeout(flushTimer.current);
+    flushTimer.current = window.setTimeout(flushMoves, 150);
   }
 
   async function finishAttempt(auto: boolean) {
@@ -200,8 +221,9 @@ export default function NonogramPlayer(props: {
       return;
     }
 
-    // Wait for all in-flight moves to reach the server before validating.
-    await Promise.all(pendingMoves.current);
+    // Flush any buffered moves, then wait for all in-flight requests.
+    flushMoves();
+    await Promise.all(pendingFlushes.current);
     try {
       const r = await api<{
         solved: boolean;
@@ -259,7 +281,7 @@ export default function NonogramPlayer(props: {
       next[idx] = newVal;
       return next;
     });
-    void postMove(idx, newVal);
+    queueMove(idx, newVal);
     setHoverRow(Math.floor(idx / puzzle.width));
     setHoverCol(idx % puzzle.width);
   }
