@@ -19,25 +19,27 @@ function lineClue(bits: number[]): number[] {
   return out.length ? out : [0];
 }
 
-function cluesMatch(
+function countCorrect(
   state: CellState[], w: number, h: number,
   rowClues: number[][], colClues: number[][],
-): boolean {
+): { correctRows: number; correctCols: number; allCorrect: boolean } {
+  let correctRows = 0;
   for (let r = 0; r < h; r++) {
     const bits = [];
     for (let c = 0; c < w; c++) bits.push(state[r * w + c] === 1 ? 1 : 0);
     const got = lineClue(bits);
     const want = rowClues[r];
-    if (got.length !== want.length || got.some((v, i) => v !== want[i])) return false;
+    if (got.length === want.length && got.every((v, i) => v === want[i])) correctRows++;
   }
+  let correctCols = 0;
   for (let c = 0; c < w; c++) {
     const bits = [];
     for (let r = 0; r < h; r++) bits.push(state[r * w + c] === 1 ? 1 : 0);
     const got = lineClue(bits);
     const want = colClues[c];
-    if (got.length !== want.length || got.some((v, i) => v !== want[i])) return false;
+    if (got.length === want.length && got.every((v, i) => v === want[i])) correctCols++;
   }
-  return true;
+  return { correctRows, correctCols, allCorrect: correctRows === h && correctCols === w };
 }
 
 export default function NonogramPlayer(props: {
@@ -94,17 +96,22 @@ export default function NonogramPlayer(props: {
     return () => document.removeEventListener("mouseup", handleUp);
   }, []);
 
+  const progress = useMemo(() =>
+    countCorrect(state, puzzle.width, puzzle.height, puzzle.rowClues, puzzle.colClues),
+    [state, puzzle],
+  );
+
   // Auto-finish: check clues after state settles (debounced to avoid
   // triggering on transient states while the user cycles a cell)
   useEffect(() => {
     if (solved || props.readonly || finishing.current) return;
     if (!state.some((s) => s === 1)) return;
+    if (!progress.allCorrect) return;
     const id = window.setTimeout(() => {
-      if (!cluesMatch(state, puzzle.width, puzzle.height, puzzle.rowClues, puzzle.colClues)) return;
       void finishAttempt(true);
     }, 300);
     return () => window.clearTimeout(id);
-  }, [state]);
+  }, [state, progress.allCorrect]);
 
   function stopTimer() {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -178,7 +185,7 @@ export default function NonogramPlayer(props: {
     if (!auto) props.onToast(null);
 
     if (props.offline) {
-      if (cluesMatch(stateRef.current, puzzle.width, puzzle.height, puzzle.rowClues, puzzle.colClues)) {
+      if (progress.allCorrect) {
         stopTimer();
         setSolved(true);
         const secs = (elapsed / 1000).toFixed(2);
@@ -415,15 +422,9 @@ export default function NonogramPlayer(props: {
         </div>
       </div>
 
-      {!props.readonly && (
-        <div className="check-area">
-          <button
-            className="btn primary lg"
-            disabled={saving || solved}
-            onClick={() => void finishAttempt(false)}
-          >
-            {solved ? "Solved!" : "Check Solution"}
-          </button>
+      {!props.readonly && !solved && state.some((s) => s === 1) && (
+        <div className="check-area hint">
+          {progress.correctRows}/{puzzle.height} rows, {progress.correctCols}/{puzzle.width} columns
         </div>
       )}
     </div>
