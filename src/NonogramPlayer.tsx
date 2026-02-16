@@ -283,7 +283,7 @@ export default function NonogramPlayer(props: {
     const rows = colDepth + h;
 
     type Item =
-      | { kind: "blank" }
+      | { kind: "empty" }
       | { kind: "clue"; text: string; rmaj: boolean; cmaj: boolean; clueRow?: number; clueCol?: number }
       | { kind: "cell"; idx: number; row: number; col: number; rmaj: boolean; cmaj: boolean; state: CellState };
 
@@ -292,23 +292,29 @@ export default function NonogramPlayer(props: {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         if (r < colDepth && c < rowDepth) {
-          items.push({ kind: "blank" });
+          items.push({ kind: "empty" });
           continue;
         }
         if (r < colDepth && c >= rowDepth) {
           const col = c - rowDepth;
           const clue = puzzle.colClues[col];
           const clueIdx = r - (colDepth - clue.length);
-          const text = clueIdx >= 0 ? String(clue[clueIdx]) : "";
-          items.push({ kind: "clue", text, rmaj: false, cmaj: (col + 1) % 5 === 0, clueCol: col });
+          if (clueIdx < 0) {
+            items.push({ kind: "empty" });
+          } else {
+            items.push({ kind: "clue", text: String(clue[clueIdx]), rmaj: false, cmaj: (col + 1) % 5 === 0, clueCol: col });
+          }
           continue;
         }
         if (r >= colDepth && c < rowDepth) {
           const row = r - colDepth;
           const clue = puzzle.rowClues[row];
           const clueIdx = c - (rowDepth - clue.length);
-          const text = clueIdx >= 0 ? String(clue[clueIdx]) : "";
-          items.push({ kind: "clue", text, rmaj: (row + 1) % 5 === 0, cmaj: false, clueRow: row });
+          if (clueIdx < 0) {
+            items.push({ kind: "empty" });
+          } else {
+            items.push({ kind: "clue", text: String(clue[clueIdx]), rmaj: (row + 1) % 5 === 0, cmaj: false, clueRow: row });
+          }
           continue;
         }
         const row = r - colDepth;
@@ -361,7 +367,7 @@ export default function NonogramPlayer(props: {
           onTouchEnd={!props.readonly ? onTouchEnd : undefined}
         >
           {cells.map((it, i) => {
-            if (it.kind === "blank") return <div key={i} className="clue" />;
+            if (it.kind === "empty") return <div key={i} className="clue-empty" />;
             if (it.kind === "clue") {
               const highlight =
                 (it.clueRow !== undefined && it.clueRow === hoverRow) ||

@@ -324,13 +324,18 @@ a {
 }
 
 .cell,
-.clue {
+.clue,
+.clue-empty {
   width: 28px;
   height: 28px;
   display: grid;
   place-items: center;
   font-size: 12px;
   font-weight: 600;
+}
+
+.cell,
+.clue {
   border: 1px solid var(--cell-border);
 }
 
