@@ -35,9 +35,6 @@ export async function verifyPassword(password: string, saltB64: string, hashB64:
   const salt = unb64(saltB64);
   const expected = unb64(hashB64);
   const derived = new Uint8Array(await pbkdf2(password, salt, iters, expected.length));
-  // constant-time compare
-  if (derived.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < derived.length; i++) diff |= derived[i] ^ expected[i];
-  return diff === 0;
+  if (derived.byteLength !== expected.byteLength) return false;
+  return crypto.subtle.timingSafeEqual(derived, expected);
 }
