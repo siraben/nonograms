@@ -242,6 +242,31 @@ a {
   gap: 12px;
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 32px;
+  text-align: center;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+}
+
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 @media (max-width: 540px) {
   .leaderboard-cols {
     grid-template-columns: 1fr;

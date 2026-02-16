@@ -935,6 +935,9 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
   const [leader10, setLeader10] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>("all");
+  const [page5, setPage5] = useState(0);
+  const [page10, setPage10] = useState(0);
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
     if (!props.online) return;
@@ -1004,26 +1007,45 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             <button
               key={p}
               className={`btn sm${period === p ? " primary" : ""}`}
-              onClick={() => setPeriod(p)}
+              onClick={() => { setPeriod(p); setPage5(0); setPage10(0); }}
             >
               {PERIOD_LABELS[p]}
             </button>
           ))}
         </div>
         <div className="leaderboard-cols">
-          {([["5x5", leader5], ["10x10", leader10]] as const).map(([label, entries]) => (
+          {([["5x5", leader5, page5, setPage5], ["10x10", leader10, page10, setPage10]] as [string, LeaderboardEntry[], number, (n: number) => void][]).map(([label, entries, page, setPage]) => {
+            const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
+            const pageEntries = entries.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+            const rankOffset = page * PAGE_SIZE;
+            return (
             <div key={label} className="card">
-              <h2>{label} Leaderboard</h2>
+              <div className="card-header-row">
+                <h2>{label} Leaderboard</h2>
+                {entries.length > PAGE_SIZE && (
+                  <div className="pagination">
+                    <button className="btn sm icon-btn" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Previous page">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                    <span className="pagination-info">{page + 1}/{totalPages}</span>
+                    <button className="btn sm icon-btn" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} aria-label="Next page">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                  </div>
+                )}
+              </div>
               {loading ? (
                 <div className="muted">Loading...</div>
               ) : entries.length === 0 ? (
                 <div className="muted">No runs yet. Be the first!</div>
               ) : (
                 <div className="list">
-                  {entries.map((e, i) => (
+                  {pageEntries.map((e, i) => {
+                    const rank = rankOffset + i;
+                    return (
                     <div key={e.attemptId} className="item">
                       <div className="title">
-                        <span style={{ marginRight: 6 }}>{i < 3 ? ["\u{1F947}", "\u{1F948}", "\u{1F949}"][i] : `#${i + 1}`}</span>
+                        <span style={{ marginRight: 6 }}>{rank < 3 ? ["\u{1F947}", "\u{1F948}", "\u{1F949}"][rank] : `#${rank + 1}`}</span>
                         {e.username}
                         <span className="muted" style={{ marginLeft: 8 }}>
                           {(e.durationMs / 1000).toFixed(2)}s
@@ -1047,11 +1069,13 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
         </>
       )}
