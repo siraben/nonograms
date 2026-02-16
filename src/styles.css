@@ -387,6 +387,64 @@ a {
   margin-bottom: 8px;
 }
 
+.scrubber {
+  margin-top: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.scrubber-track {
+  position: relative;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.scrubber-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.1s;
+}
+
+.scrubber-dot {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  transform: translate(-50%, -50%);
+  opacity: 0.4;
+  transition: opacity 0.1s, transform 0.1s;
+}
+
+.scrubber-dot-past {
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+.scrubber-dot-active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.scrubber-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--panel);
+  box-shadow: var(--shadow);
+  transform: translate(-50%, -50%);
+  transition: left 0.1s;
+}
+
 .timeline {
   max-height: 200px;
   overflow-y: auto;

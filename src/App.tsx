@@ -1086,30 +1086,65 @@ function Replay(props: {
           />
         )}
         {moves.length > 0 && puzzle && (
-          <div className="timeline" ref={timelineRef}>
-            {moves.map((m, i) => {
-              const active = i + 1 === pos;
-              const past = i + 1 <= pos;
-              const r = Math.floor(m.idx / puzzle.width) + 1;
-              const c = (m.idx % puzzle.width) + 1;
-              const action = m.state === 1 ? "fill" : m.state === 2 ? "X" : "clear";
-              return (
+          <>
+            <div
+              className="scrubber"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const idx = Math.round(pct * moves.length);
+                if (playing) pause();
+                applyTo(idx);
+              }}
+            >
+              <div className="scrubber-track">
                 <div
-                  key={m.seq}
-                  className={`tl-item${active ? " tl-active" : ""}${past ? " tl-past" : ""}`}
-                  data-active={active ? "" : undefined}
-                  onClick={() => {
-                    if (playing) pause();
-                    applyTo(i + 1);
-                  }}
-                >
-                  <span className="tl-time">{(m.atMs / 1000).toFixed(1)}s</span>
-                  <span className="tl-action">{action}</span>
-                  <span className="tl-cell">r{r}c{c}</span>
-                </div>
-              );
-            })}
-          </div>
+                  className="scrubber-fill"
+                  style={{ width: `${moves.length ? (pos / moves.length) * 100 : 0}%` }}
+                />
+                {moves.map((m, i) => {
+                  const totalMs = moves[moves.length - 1].atMs || 1;
+                  const pct = (m.atMs / totalMs) * 100;
+                  return (
+                    <div
+                      key={m.seq}
+                      className={`scrubber-dot${i + 1 <= pos ? " scrubber-dot-past" : ""}${i + 1 === pos ? " scrubber-dot-active" : ""}`}
+                      style={{ left: `${pct}%` }}
+                      title={`${(m.atMs / 1000).toFixed(1)}s — ${m.state === 1 ? "fill" : m.state === 2 ? "X" : "clear"} r${Math.floor(m.idx / puzzle.width) + 1}c${(m.idx % puzzle.width) + 1}`}
+                    />
+                  );
+                })}
+                <div
+                  className="scrubber-thumb"
+                  style={{ left: `${moves.length ? (pos / moves.length) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+            <div className="timeline" ref={timelineRef}>
+              {moves.map((m, i) => {
+                const active = i + 1 === pos;
+                const past = i + 1 <= pos;
+                const r = Math.floor(m.idx / puzzle.width) + 1;
+                const c = (m.idx % puzzle.width) + 1;
+                const action = m.state === 1 ? "fill" : m.state === 2 ? "X" : "clear";
+                return (
+                  <div
+                    key={m.seq}
+                    className={`tl-item${active ? " tl-active" : ""}${past ? " tl-past" : ""}`}
+                    data-active={active ? "" : undefined}
+                    onClick={() => {
+                      if (playing) pause();
+                      applyTo(i + 1);
+                    }}
+                  >
+                    <span className="tl-time">{(m.atMs / 1000).toFixed(1)}s</span>
+                    <span className="tl-action">{action}</span>
+                    <span className="tl-cell">r{r}c{c}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </>
