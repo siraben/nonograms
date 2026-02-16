@@ -1256,7 +1256,7 @@ function Replay(props: {
   }
 
   async function shareReplay() {
-    const url = `${location.origin}/#/replay/${props.attemptId}`;
+    const url = `${location.origin}/s/${props.attemptId}`;
     const size = puzzle ? `${puzzle.width}x${puzzle.height}` : "?x?";
     const time = meta?.durationMs ? `${(meta.durationMs / 1000).toFixed(2)}s` : "?s";
     const text = `I solved a ${size} nonogram in ${time}! Try to beat my time or watch my replay at ${url}`;
