@@ -438,25 +438,31 @@ export default function App() {
       {toast && <div className={`toast ${toast.kind}`}>{toast.msg}</div>}
 
       {authedRoute.name === "login" && (
-        <AuthCard
-          mode="login"
-          onAuthed={async () => {
-            setUser(await Auth.me());
-            nav("/");
-          }}
-          onToast={setToast}
-        />
+        <>
+          <AuthCard
+            mode="login"
+            onAuthed={async () => {
+              setUser(await Auth.me());
+              nav("/");
+            }}
+            onToast={setToast}
+          />
+          {online && <PublicLeaderboard />}
+        </>
       )}
 
       {authedRoute.name === "register" && (
-        <AuthCard
-          mode="register"
-          onAuthed={async () => {
-            setUser(await Auth.me());
-            nav("/");
-          }}
-          onToast={setToast}
-        />
+        <>
+          <AuthCard
+            mode="register"
+            onAuthed={async () => {
+              setUser(await Auth.me());
+              nav("/");
+            }}
+            onToast={setToast}
+          />
+          {online && <PublicLeaderboard />}
+        </>
       )}
 
       {authedRoute.name === "admin" && <AdminDashboard onToast={setToast} />}
@@ -650,6 +656,92 @@ function AuthCard(props: {
         </div>
       </div>
     </div>
+  );
+}
+
+type PublicEntry = { username: string; durationMs: number; finishedAt: string; width: number; height: number };
+
+function PublicLeaderboard() {
+  const [entries5, setEntries5] = useState<PublicEntry[]>([]);
+  const [entries10, setEntries10] = useState<PublicEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [signupPrompt, setSignupPrompt] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await api<{ leaderboard5: PublicEntry[]; leaderboard10: PublicEntry[] }>("/api/leaderboard/public");
+        setEntries5(r.leaderboard5);
+        setEntries10(r.leaderboard10);
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading || (entries5.length === 0 && entries10.length === 0)) return null;
+
+  const medal = (i: number) => i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : "\u{1F949}";
+
+  const renderColumn = (label: string, entries: PublicEntry[]) => (
+    <div className="card">
+      <h2>{label} Leaderboard</h2>
+      {entries.length === 0 ? (
+        <div className="muted">No runs yet</div>
+      ) : (
+        <div className="list">
+          {entries.map((e, i) => (
+            <div key={i} className="item">
+              <div className="title">
+                {medal(i)} {e.username}
+                <span className="muted" style={{ marginLeft: 8 }}>
+                  {(e.durationMs / 1000).toFixed(2)}s
+                </span>
+              </div>
+              <div className="meta">{fmtTime(e.finishedAt)}</div>
+              <div className="row item-actions">
+                <button className="btn sm" onClick={() => setSignupPrompt(true)}>play</button>
+                <button className="btn sm" onClick={() => setSignupPrompt(true)}>watch replay</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      <div className="leaderboard-cols">
+        {renderColumn("5x5", entries5)}
+        {renderColumn("10x10", entries10)}
+      </div>
+      {signupPrompt && (
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setSignupPrompt(false); }}
+        >
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Sign up required">
+            <div className="modal-head">
+              <div className="modal-title">Sign up to play</div>
+              <button className="modal-close" onClick={() => setSignupPrompt(false)} aria-label="Close">&times;</button>
+            </div>
+            <div className="modal-body">
+              <p className="help-text">
+                Create an account to play online puzzles, compete on the leaderboard, and watch replays.
+              </p>
+              <div className="btn-group" style={{ marginTop: 12 }}>
+                <button className="btn primary" onClick={() => { setSignupPrompt(false); nav("/register"); }}>Register</button>
+                <button className="btn" onClick={() => { setSignupPrompt(false); nav("/login"); }}>Login</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
