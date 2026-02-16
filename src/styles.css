@@ -665,6 +665,12 @@ a {
   margin-bottom: 10px;
 }
 
+.realtime-toggle {
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
 .turnstile-wrap {
   min-height: 70px;
 }

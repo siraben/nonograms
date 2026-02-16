@@ -944,6 +944,8 @@ function Replay(props: {
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
   const [replayElapsed, setReplayElapsed] = useState(0);
+  const [realtime, setRealtime] = useState(false);
+  const realtimeRef = useRef(false);
   const [state, setState] = useState<CellState[]>(
     Array.from({ length: 100 }, () => 0 as CellState)
   );
@@ -1023,8 +1025,8 @@ function Replay(props: {
       }
       applyTo(i);
       if (i < moves.length) {
-        let delay = (moves[i].atMs - moves[i - 1].atMs) * scale;
-        if (delay > 1000) delay = 1000; // cap individual gaps at 1s
+        const raw = moves[i].atMs - moves[i - 1].atMs;
+        let delay = realtimeRef.current ? raw : Math.min(raw * scale, 1000);
         timer.current = window.setTimeout(step, delay);
       } else {
         // Last move applied, finish
@@ -1059,6 +1061,14 @@ function Replay(props: {
           <button className="btn" onClick={() => applyTo(0)} disabled={!moves.length}>
             Reset
           </button>
+          <label className="row muted realtime-toggle">
+            <input
+              type="checkbox"
+              checked={realtime}
+              onChange={(e) => { setRealtime(e.target.checked); realtimeRef.current = e.target.checked; }}
+            />
+            Real time
+          </label>
           <span className="muted">
             {meta ? (
               <>
