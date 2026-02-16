@@ -1,6 +1,12 @@
 const CACHE = "nonogram-v1";
+const APP_SHELL = ["/", "/manifest.json", "/favicon.svg", "/apple-touch-icon.png"];
 
-self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("install", (e) => {
+  e.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(APP_SHELL))
+  );
+  self.skipWaiting();
+});
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
@@ -16,7 +22,7 @@ self.addEventListener("fetch", (e) => {
   // Never cache API calls
   if (url.pathname.startsWith("/api/")) return;
 
-  // Navigation: network-first, fallback to cached index.html
+  // Navigation: network-first, fallback to cached app shell
   if (e.request.mode === "navigate") {
     e.respondWith(
       fetch(e.request)
@@ -25,7 +31,7 @@ self.addEventListener("fetch", (e) => {
           caches.open(CACHE).then((c) => c.put(e.request, clone));
           return r;
         })
-        .catch(() => caches.match("/") || caches.match("/index.html"))
+        .catch(() => caches.match("/").then((r) => r || caches.match("/index.html")))
     );
     return;
   }
