@@ -14,15 +14,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const startedCutoff = new Date(now - STALE_STARTED_MS).toISOString();
   const unstartedCutoff = new Date(now - STALE_UNSTARTED_MS).toISOString();
 
-  // Abandon started attempts older than 4 hours
-  const abandoned = await env.DB.prepare(
-    "UPDATE attempts SET completed = 1, eligible = 0 WHERE completed = 0 AND started_at IS NOT NULL AND started_at < ?"
-  ).bind(startedCutoff).run();
-
-  // Delete never-started attempts older than 1 hour
-  const deleted = await env.DB.prepare(
-    "DELETE FROM attempts WHERE completed = 0 AND started_at IS NULL AND created_at < ?"
-  ).bind(unstartedCutoff).run();
+  // Abandon started attempts older than 4 hours; delete never-started ones older than 1 hour.
+  const [abandoned, deleted] = await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE attempts SET completed = 1, eligible = 0 WHERE completed = 0 AND started_at IS NOT NULL AND started_at < ?"
+    ).bind(startedCutoff),
+    env.DB.prepare(
+      "DELETE FROM attempts WHERE completed = 0 AND started_at IS NULL AND created_at < ?"
+    ).bind(unstartedCutoff),
+  ]);
 
   return json({
     abandoned: abandoned.meta?.changes ?? 0,

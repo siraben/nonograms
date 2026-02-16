@@ -1,6 +1,7 @@
 import type { Env } from "../../lib/auth";
 import { requireUser } from "../../lib/auth";
 import { err, json } from "../../lib/http";
+import { puzzleTitle } from "../../lib/puzzle";
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request, params }) => {
   const authed = await requireUser(env, request);
@@ -58,7 +59,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
     attempt,
     puzzle: {
       id: a.puzzleId,
-      title: `${a.width}x${a.height} ${a.puzzleId.slice(0, 8)}`,
+      title: puzzleTitle(a.width, a.height, a.puzzleId),
       width: a.width,
       height: a.height,
       rowClues: JSON.parse(a.rowCluesJson),

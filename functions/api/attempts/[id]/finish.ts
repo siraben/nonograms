@@ -84,8 +84,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   if ((upd.meta?.changes || 0) !== 1) return err(409, "attempt already finished");
 
   // Read back the final eligible value set by the atomic UPDATE.
-  const final = await env.DB.prepare("SELECT eligible, duration_ms as durationMs FROM attempts WHERE id = ?")
-    .bind(attemptId).first<{ eligible: number; durationMs: number }>();
+  const final = await env.DB.prepare("SELECT eligible FROM attempts WHERE id = ?")
+    .bind(attemptId).first<{ eligible: number }>();
 
   return json({ solved: true, durationMs, eligible: final?.eligible === 1 });
 };

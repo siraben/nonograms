@@ -1,6 +1,10 @@
 import { computeClues } from "./nonogram";
 import { XorShift32 } from "./rng";
 
+export function puzzleTitle(width: number, height: number, id: string): string {
+  return `${width}x${height} ${id.slice(0, 8)}`;
+}
+
 export function genPuzzle(
   width: number,
   height: number,

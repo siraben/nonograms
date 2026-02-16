@@ -1,64 +1,20 @@
 import type { Env } from "../../lib/auth";
 import { getSession } from "../../lib/auth";
-
-type Row = {
-  attemptId: string;
-  puzzleId: string;
-  durationMs: number;
-  finishedAt: string;
-  username: string;
-  width: number;
-  height: number;
-};
-
-function periodCutoff(period: string | null): string | null {
-  const now = new Date();
-  switch (period) {
-    case "day":
-      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
-    case "week": {
-      const daysSinceMonday = (now.getUTCDay() + 6) % 7;
-      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceMonday)).toISOString();
-    }
-    case "month":
-      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-    default: return null;
-  }
-}
+import { err } from "../../lib/http";
+import { periodCutoff, queryLeaderboard } from "../../lib/leaderboard";
 
 async function fetchBoth(db: D1Database, period: string | null) {
   const cutoff = periodCutoff(period);
-  const q = (size: number) =>
-    db.prepare(
-      `SELECT a.id as attemptId,
-              a.puzzle_id as puzzleId,
-              a.duration_ms as durationMs,
-              a.finished_at as finishedAt,
-              u.username as username,
-              p.width as width,
-              p.height as height
-       FROM attempts a
-       JOIN users u ON u.id = a.user_id
-       JOIN puzzles p ON p.id = a.puzzle_id
-       WHERE a.completed = 1 AND a.eligible = 1 AND a.duration_ms IS NOT NULL
-         AND p.width = ?1 AND p.height = ?1
-         AND (?2 IS NULL OR a.finished_at >= ?2)
-       ORDER BY a.duration_ms ASC
-       LIMIT 50`
-    ).bind(size, cutoff).all<Row>();
-
-  const [r5, r10] = await Promise.all([q(5), q(10)]);
+  const [r5, r10] = await Promise.all([
+    queryLeaderboard(db, 5, cutoff, 50),
+    queryLeaderboard(db, 10, cutoff, 50),
+  ]);
   return { leaderboard5: r5.results, leaderboard10: r10.results };
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const session = await getSession(env, request);
-  if (!session) {
-    return new Response(JSON.stringify({ error: "not logged in" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  if (!session) return err(401, "not logged in");
 
   const url = new URL(request.url);
   const period = url.searchParams.get("period");

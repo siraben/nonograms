@@ -21,22 +21,27 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   const now = new Date().toISOString();
 
-  // Abandon user's stale in-progress attempts
-  await env.DB.prepare(
-    "UPDATE attempts SET completed = 1, eligible = 0 WHERE user_id = ? AND completed = 0 AND started_at IS NOT NULL"
-  ).bind(authed.userId).run();
-  // Clean up never-started attempts
-  await env.DB.prepare(
-    "DELETE FROM attempts WHERE user_id = ? AND completed = 0 AND started_at IS NULL"
-  ).bind(authed.userId).run();
+  // Abandon stale in-progress attempts and clean up never-started ones in a single batch.
+  await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE attempts SET completed = 1, eligible = 0 WHERE user_id = ? AND completed = 0 AND started_at IS NOT NULL"
+    ).bind(authed.userId),
+    env.DB.prepare(
+      "DELETE FROM attempts WHERE user_id = ? AND completed = 0 AND started_at IS NULL"
+    ).bind(authed.userId),
+  ]);
 
   let puzzleId = body.puzzleId;
 
   const size = body.size && ALLOWED_SIZES.includes(body.size as any) ? body.size : 10;
+  let width: number;
+  let height: number;
 
   if (puzzleId) {
-    const p = await env.DB.prepare("SELECT id FROM puzzles WHERE id = ?").bind(puzzleId).first();
-    if (!p) return err(404, "puzzle not found");
+    const puzzleRow = await env.DB.prepare("SELECT width, height FROM puzzles WHERE id = ?").bind(puzzleId).first<{ width: number; height: number }>();
+    if (!puzzleRow) return err(404, "puzzle not found");
+    width = puzzleRow.width;
+    height = puzzleRow.height;
   } else {
     const seed = randomU32();
     const p = genPuzzle(size, size, seed);
@@ -46,13 +51,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     )
       .bind(puzzleId, p.width, p.height, p.seed, p.solution, JSON.stringify(p.rowClues), JSON.stringify(p.colClues), now)
       .run();
+    width = size;
+    height = size;
   }
 
-  const puzzleRow = await env.DB.prepare("SELECT width, height FROM puzzles WHERE id = ?").bind(puzzleId).first<{ width: number; height: number }>();
-  if (!puzzleRow) return err(500, "puzzle missing");
-
   const attemptId = crypto.randomUUID();
-  const state = Array.from({ length: puzzleRow.width * puzzleRow.height }, () => 0);
+  const state = Array.from({ length: width * height }, () => 0);
   // Compute eligibility atomically via subquery to avoid TOCTTOU race with concurrent replay views.
   await env.DB.prepare(
     `INSERT INTO attempts (id, puzzle_id, user_id, created_at, eligible, completed, current_state_json)
@@ -70,6 +74,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   return json({
     attempt: { id: attemptId, puzzleId, eligible: eligible?.eligible === 1, state },
-    puzzle: { width: puzzleRow.width, height: puzzleRow.height }
+    puzzle: { width, height }
   });
 };
