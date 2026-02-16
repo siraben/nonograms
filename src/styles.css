@@ -586,8 +586,9 @@ a {
 
 .modal-body li {
   font-size: 13px;
-  padding: 2px 0;
+  padding: 2px 0 2px 16px;
   line-height: 1.5;
+  text-indent: -16px;
 }
 
 .modal-body li::before {

@@ -835,13 +835,13 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             className="btn primary lg"
             onClick={() => props.online ? void newGame(undefined, 5) : nav("/offline/5")}
           >
-            New 5x5
+            5x5
           </button>
           <button
             className="btn primary lg"
             onClick={() => props.online ? void newGame(undefined, 10) : nav("/offline/10")}
           >
-            New 10x10
+            10x10
           </button>
         </div>
         {props.online && (
@@ -1465,7 +1465,7 @@ function Replay(props: {
       {props.finishedSize && (
         <div className="card text-center">
           <button className="btn primary lg" onClick={startNewGame}>
-            New {props.finishedSize}&times;{props.finishedSize}
+            {props.finishedSize}&times;{props.finishedSize}
           </button>
         </div>
       )}
