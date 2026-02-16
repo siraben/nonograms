@@ -8,8 +8,6 @@ import { useOnline } from "./useOnline";
 import { genPuzzle } from "../functions/lib/puzzle";
 import { randomU32 } from "../functions/lib/rng";
 
-let justFinishedGame: { attemptId: string; size: number } | null = null;
-
 type Route =
   | { name: "login" }
   | { name: "register" }
@@ -112,6 +110,42 @@ function HelpIcon(props: { title?: string }) {
         strokeLinejoin="round"
       />
       <path d="M12 17h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Based on Lucide "share" (ISC license): https://lucide.dev/icons/share
+function ShareIcon(props: { title?: string }) {
+  return (
+    <svg
+      aria-hidden={props.title ? undefined : true}
+      role={props.title ? "img" : "presentation"}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      {props.title ? <title>{props.title}</title> : null}
+      <path
+        d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <polyline
+        points="16 6 12 2 8 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <line
+        x1="12" y1="2" x2="12" y2="15"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -923,6 +957,7 @@ function Play(props: {
   const [dims, setDims] = useState<{ width: number; height: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [finished, setFinished] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -988,6 +1023,18 @@ function Play(props: {
 
   const notStarted = attempt && !attempt.startedAt;
 
+  if (finished && puzzle) {
+    return (
+      <Replay
+        attemptId={props.attemptId}
+        onToast={props.onToast}
+        skipConfirm
+        autoPlay
+        finishedSize={puzzle.width}
+      />
+    );
+  }
+
   return (
     <>
       <div className="back-nav">
@@ -1025,10 +1072,7 @@ function Play(props: {
             initialState={attempt.state}
             startedAt={attempt.startedAt}
             onToast={props.onToast}
-            onSolved={() => {
-              justFinishedGame = { attemptId: props.attemptId, size: puzzle.width };
-              nav(`/replay/${props.attemptId}`);
-            }}
+            onSolved={() => setFinished(true)}
           />
         )}
       </div>
@@ -1039,6 +1083,9 @@ function Play(props: {
 function Replay(props: {
   attemptId: string;
   onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+  skipConfirm?: boolean;
+  autoPlay?: boolean;
+  finishedSize?: number;
 }) {
   const [confirmed, setConfirmed] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -1055,7 +1102,6 @@ function Replay(props: {
     Array.from({ length: 100 }, () => 0 as CellState)
   );
   const [dragPct, setDragPct] = useState<number | null>(null);
-  const [finishedSize, setFinishedSize] = useState<number | null>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const wantAutoPlay = useRef(false);
   const timer = useRef<number | null>(null);
@@ -1063,10 +1109,8 @@ function Replay(props: {
 
   // Check if user already viewed this puzzle's replay
   useEffect(() => {
-    if (justFinishedGame && justFinishedGame.attemptId === props.attemptId) {
-      setFinishedSize(justFinishedGame.size);
-      justFinishedGame = null;
-      wantAutoPlay.current = true;
+    if (props.skipConfirm) {
+      wantAutoPlay.current = !!props.autoPlay;
       setConfirmed(true);
       setChecking(false);
       return;
@@ -1194,11 +1238,23 @@ function Replay(props: {
     setPlaying(false);
   }
 
+  async function shareReplay() {
+    const url = `${location.origin}/#/replay/${props.attemptId}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Nonogram Replay", url });
+        return;
+      } catch { /* user cancelled */ }
+    }
+    await navigator.clipboard.writeText(url);
+    props.onToast({ kind: "ok", msg: "Replay link copied!" });
+  }
+
   async function startNewGame() {
     try {
       const r = await api<{ attempt: { id: string } }>("/api/attempts/new", {
         method: "POST",
-        json: { size: finishedSize },
+        json: { size: props.finishedSize },
       });
       nav(`/a/${r.attempt.id}`);
     } catch (err) {
@@ -1264,6 +1320,14 @@ function Replay(props: {
           </button>
           <button className="btn" onClick={() => applyTo(0)} disabled={!moves.length}>
             Reset
+          </button>
+          <button
+            className="icon-btn"
+            onClick={shareReplay}
+            aria-label="Share replay"
+            title="Share replay"
+          >
+            <ShareIcon />
           </button>
           <label className="row muted realtime-toggle">
             <input
@@ -1398,10 +1462,10 @@ function Replay(props: {
           </>
         )}
       </div>
-      {finishedSize && (
+      {props.finishedSize && (
         <div className="card text-center">
           <button className="btn primary lg" onClick={startNewGame}>
-            New {finishedSize}&times;{finishedSize}
+            New {props.finishedSize}&times;{props.finishedSize}
           </button>
         </div>
       )}
