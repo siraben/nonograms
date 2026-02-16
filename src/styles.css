@@ -796,7 +796,13 @@ a {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
+}
+
+.login-layout > .card {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 @media (max-width: 600px) {
