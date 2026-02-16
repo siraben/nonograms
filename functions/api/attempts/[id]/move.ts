@@ -44,13 +44,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   const seq = nextSeq?.s || 1;
 
   // Use json_set to atomically update the single cell, avoiding read-modify-write races.
+  const path = `$[${idx}]`;
   await env.DB.batch([
     env.DB.prepare(
       "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, ?, ?, ?, ?, ?)"
     ).bind(attemptId, seq, atMs, idx, st, now.toISOString()),
     env.DB.prepare(
-      "UPDATE attempts SET current_state_json = json_set(current_state_json, '$[' || ? || ']', ?) WHERE id = ?"
-    ).bind(idx, st, attemptId)
+      "UPDATE attempts SET current_state_json = json_set(current_state_json, ?, ?) WHERE id = ?"
+    ).bind(path, st, attemptId)
   ]);
 
   return json({ ok: true, seq, atMs });
