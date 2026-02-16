@@ -829,7 +829,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
                   {entries.map((e, i) => (
                     <div key={e.attemptId} className="item">
                       <div className="title">
-                        <span className="muted" style={{ marginRight: 6 }}>#{i + 1}</span>
+                        <span style={{ marginRight: 6 }}>{i < 3 ? ["\u{1F947}", "\u{1F948}", "\u{1F949}"][i] : `#${i + 1}`}</span>
                         {e.username}
                         <span className="muted" style={{ marginLeft: 8 }}>
                           {(e.durationMs / 1000).toFixed(2)}s

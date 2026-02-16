@@ -398,6 +398,9 @@ a {
   cursor: grab;
   touch-action: none;
   user-select: none;
+  max-width: 66%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .scrubber:active {
