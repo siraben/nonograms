@@ -37,7 +37,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
     .bind(attemptId)
     .all<{ seq: number; atMs: number; idx: number; state: number }>();
 
-  // Mark that this user has viewed a replay for this puzzle (disqualifies future leaderboard runs for that puzzle).
+  // Mark that this user has viewed a replay for this puzzle (their times won't count for the leaderboard).
   const authed = await getSession(env, request);
   if (authed) {
     const now = new Date().toISOString();

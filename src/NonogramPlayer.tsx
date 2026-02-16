@@ -207,7 +207,7 @@ export default function NonogramPlayer(props: {
         setSolved(true);
         if (typeof r.durationMs === "number") setElapsed(r.durationMs);
         const t = typeof r.durationMs === "number" ? ` in ${(r.durationMs / 1000).toFixed(2)}s` : "";
-        const el = r.eligible === false ? " (not eligible for leaderboard)" : "";
+        const el = r.eligible === false ? " (replay viewed \u2014 not on leaderboard)" : "";
         props.onToast({ kind: "ok", msg: `Solved${t}${el}` });
       } else if (!auto) {
         props.onToast({
@@ -349,7 +349,7 @@ export default function NonogramPlayer(props: {
 
       {!props.eligible && !props.readonly && (
         <div className="hint" style={{ marginBottom: 8 }}>
-          Not eligible for leaderboard (viewed replay).
+          You've watched a replay of this puzzle, so your time won't appear on the leaderboard.
         </div>
       )}
 

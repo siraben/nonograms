@@ -428,7 +428,7 @@ export default function App() {
                 <li>Timer starts when you click Start</li>
                 <li>Puzzle auto-submits when solved correctly</li>
                 <li>Leaderboard is per puzzle size</li>
-                <li>Viewing a replay disqualifies you for that puzzle</li>
+                <li>Watching a replay means your times won't count for that puzzle's leaderboard</li>
               </ul>
             </div>
           </div>
@@ -806,7 +806,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
         </div>
         {props.online && (
           <div className="hint" style={{ marginTop: 8 }}>
-            Viewing a replay disqualifies you from that puzzle's leaderboard.
+            Watching a replay means your times won't count for that puzzle's leaderboard.
           </div>
         )}
       </div>
@@ -1030,6 +1030,7 @@ function Replay(props: {
   attemptId: string;
   onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
 }) {
+  const [confirmed, setConfirmed] = useState(false);
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [moves, setMoves] = useState<ReplayMove[]>([]);
   const [meta, setMeta] = useState<{ username: string; durationMs: number | null } | null>(null);
@@ -1046,6 +1047,7 @@ function Replay(props: {
   const timelineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!confirmed) return;
     (async () => {
       setPlaying(false);
       setPos(0);
@@ -1070,7 +1072,7 @@ function Replay(props: {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [props.attemptId]);
+  }, [props.attemptId, confirmed]);
 
   // Auto-scroll timeline to current move
   useEffect(() => {
@@ -1135,6 +1137,32 @@ function Replay(props: {
     setPlaying(false);
   }
 
+  if (!confirmed) {
+    return (
+      <>
+        <div className="back-nav">
+          <button className="btn" onClick={() => nav("/")}>
+            &larr; Back
+          </button>
+        </div>
+        <div className="card text-center">
+          <h2>Watch Replay</h2>
+          <p className="help-text">
+            If you watch this replay, your times for this puzzle won't count for the leaderboard.
+          </p>
+          <div className="btn-group" style={{ marginTop: 12 }}>
+            <button className="btn primary" onClick={() => setConfirmed(true)}>
+              Watch anyway
+            </button>
+            <button className="btn" onClick={() => nav("/")}>
+              Go back
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="back-nav">
@@ -1174,9 +1202,6 @@ function Replay(props: {
               "Loading..."
             )}
           </span>
-        </div>
-        <div className="hint" style={{ marginBottom: 8 }}>
-          Viewing a replay disqualifies future leaderboard runs for this puzzle.
         </div>
         {puzzle && (
           <NonogramPlayer
