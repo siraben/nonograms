@@ -654,15 +654,19 @@ function AuthCard(props: {
 }
 
 function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
-  const [leader, setLeader] = useState<LeaderboardEntry[]>([]);
+  const [leader5, setLeader5] = useState<LeaderboardEntry[]>([]);
+  const [leader10, setLeader10] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lbSize, setLbSize] = useState<5 | 10>(10);
 
   async function refreshLeader() {
     setLoading(true);
     try {
-      const r = await api<{ leaderboard: LeaderboardEntry[] }>(`/api/leaderboard?size=${lbSize}`);
-      setLeader(r.leaderboard);
+      const [r5, r10] = await Promise.all([
+        api<{ leaderboard: LeaderboardEntry[] }>("/api/leaderboard?size=5"),
+        api<{ leaderboard: LeaderboardEntry[] }>("/api/leaderboard?size=10"),
+      ]);
+      setLeader5(r5.leaderboard);
+      setLeader10(r10.leaderboard);
     } finally {
       setLoading(false);
     }
@@ -670,7 +674,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
 
   useEffect(() => {
     if (props.online) void refreshLeader();
-  }, [lbSize, props.online]);
+  }, [props.online]);
 
   async function newGame(puzzleId?: string, size?: number) {
     props.onToast(null);
@@ -718,67 +722,56 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
       </div>
 
       {props.online && (
-        <div className="card">
-          <div className="card-header-row">
-            <h2>Leaderboard</h2>
-            <div className="row">
-              <button
-                className={`btn sm${lbSize === 5 ? " selected" : ""}`}
-                onClick={() => setLbSize(5)}
-              >
-                5x5
-              </button>
-              <button
-                className={`btn sm${lbSize === 10 ? " selected" : ""}`}
-                onClick={() => setLbSize(10)}
-              >
-                10x10
-              </button>
-              <button
-                className="btn sm"
-                onClick={() => void refreshLeader()}
-              >
-                refresh
-              </button>
-            </div>
-          </div>
-          {loading ? (
-            <div className="muted">Loading...</div>
-          ) : leader.length === 0 ? (
-            <div className="muted">No runs yet. Be the first!</div>
-          ) : (
-            <div className="list list-2col">
-              {leader.map((e, i) => (
-                <div key={e.attemptId} className="item">
-                  <div className="title">
-                    <span className="muted" style={{ marginRight: 6 }}>#{i + 1}</span>
-                    {e.username}
-                    <span className="muted" style={{ marginLeft: 8 }}>
-                      {(e.durationMs / 1000).toFixed(2)}s
-                    </span>
-                  </div>
-                  <div className="meta">
-                    {e.width}x{e.height} {e.puzzleId.slice(0, 8)} &mdash;{" "}
-                    {fmtTime(e.finishedAt)}
-                  </div>
-                  <div className="row item-actions">
-                    <button
-                      className="btn sm"
-                      onClick={() => void newGame(e.puzzleId)}
-                    >
-                      play
-                    </button>
-                    <button
-                      className="btn sm"
-                      onClick={() => nav(`/replay/${e.attemptId}`)}
-                    >
-                      watch replay
-                    </button>
-                  </div>
+        <div className="leaderboard-cols">
+          {([["5x5", leader5], ["10x10", leader10]] as const).map(([label, entries]) => (
+            <div key={label} className="card">
+              <div className="card-header-row">
+                <h2>{label} Leaderboard</h2>
+                <button
+                  className="btn sm"
+                  onClick={() => void refreshLeader()}
+                >
+                  refresh
+                </button>
+              </div>
+              {loading ? (
+                <div className="muted">Loading...</div>
+              ) : entries.length === 0 ? (
+                <div className="muted">No runs yet. Be the first!</div>
+              ) : (
+                <div className="list">
+                  {entries.map((e, i) => (
+                    <div key={e.attemptId} className="item">
+                      <div className="title">
+                        <span className="muted" style={{ marginRight: 6 }}>#{i + 1}</span>
+                        {e.username}
+                        <span className="muted" style={{ marginLeft: 8 }}>
+                          {(e.durationMs / 1000).toFixed(2)}s
+                        </span>
+                      </div>
+                      <div className="meta">
+                        {e.puzzleId.slice(0, 8)} &mdash; {fmtTime(e.finishedAt)}
+                      </div>
+                      <div className="row item-actions">
+                        <button
+                          className="btn sm"
+                          onClick={() => void newGame(e.puzzleId)}
+                        >
+                          play
+                        </button>
+                        <button
+                          className="btn sm"
+                          onClick={() => nav(`/replay/${e.attemptId}`)}
+                        >
+                          watch replay
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
+          ))}
         </div>
       )}
     </>
