@@ -1257,14 +1257,11 @@ function Replay(props: {
 
   async function shareReplay() {
     const url = `${location.origin}/#/replay/${props.attemptId}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Nonogram Replay", url });
-        return;
-      } catch { /* user cancelled */ }
-    }
-    await navigator.clipboard.writeText(url);
-    props.onToast({ kind: "ok", msg: "Replay link copied!" });
+    const size = puzzle ? `${puzzle.width}x${puzzle.height}` : "?x?";
+    const time = meta?.durationMs ? `${(meta.durationMs / 1000).toFixed(2)}s` : "?s";
+    const text = `I solved a ${size} nonogram in ${time}! Try to beat my time or watch my replay at ${url}`;
+    await navigator.clipboard.writeText(text);
+    props.onToast({ kind: "ok", msg: "Copied to clipboard!" });
   }
 
   async function startNewGame() {
