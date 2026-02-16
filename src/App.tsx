@@ -356,7 +356,7 @@ export default function App() {
         </div>
         <div className="row">
           <button
-            className="theme-toggle icon-btn"
+            className="btn icon-btn"
             onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
             aria-label="Toggle theme"
             title="Toggle theme"
@@ -364,7 +364,7 @@ export default function App() {
             {theme === "light" ? <SunIcon /> : <MoonIcon />}
           </button>
           <button
-            className="theme-toggle icon-btn"
+            className="btn icon-btn"
             onClick={() => setHelpOpen(true)}
             aria-label="Help"
             title="Help"
@@ -474,7 +474,7 @@ export default function App() {
       {toast && <div className={`toast ${toast.kind}`}>{toast.msg}</div>}
 
       {authedRoute.name === "login" && (
-        <>
+        <div className={online ? "login-layout" : undefined}>
           <AuthCard
             mode="login"
             onAuthed={async () => {
@@ -484,11 +484,11 @@ export default function App() {
             onToast={setToast}
           />
           {online && <PublicLeaderboard />}
-        </>
+        </div>
       )}
 
       {authedRoute.name === "register" && (
-        <>
+        <div className={online ? "login-layout" : undefined}>
           <AuthCard
             mode="register"
             onAuthed={async () => {
@@ -498,7 +498,7 @@ export default function App() {
             onToast={setToast}
           />
           {online && <PublicLeaderboard />}
-        </>
+        </div>
       )}
 
       {authedRoute.name === "admin" && <AdminDashboard onToast={setToast} />}
@@ -702,6 +702,7 @@ function PublicLeaderboard() {
   const [entries10, setEntries10] = useState<PublicEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [signupPrompt, setSignupPrompt] = useState(false);
+  const [tab, setTab] = useState<"5" | "10">("5");
 
   useEffect(() => {
     (async () => {
@@ -717,46 +718,47 @@ function PublicLeaderboard() {
     })();
   }, []);
 
-  if (loading || (entries5.length === 0 && entries10.length === 0)) return null;
-
   const medal = (i: number) => i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : "\u{1F949}";
-
-  const renderColumn = (label: string, entries: PublicEntry[]) => (
-    <div className="card">
-      <h2>{label} Leaderboard</h2>
-      {entries.length === 0 ? (
-        <div className="muted">No runs yet</div>
-      ) : (
-        <div className="list">
-          {entries.map((e, i) => (
-            <div key={i} className="item">
-              <div className="title">
-                {medal(i)} {e.username}
-                <span className="muted" style={{ marginLeft: 8 }}>
-                  {(e.durationMs / 1000).toFixed(2)}s
-                </span>
-              </div>
-              <div className="meta">{fmtTime(e.finishedAt)}</div>
-              <div className="row item-actions">
-                <button className="btn sm" onClick={() => setSignupPrompt(true)}>play</button>
-                <button className="btn sm" onClick={() => setSignupPrompt(true)}>watch replay</button>
-              </div>
-            </div>
-          ))}
-          <div className="item blurred-item" aria-hidden="true" onClick={() => setSignupPrompt(true)}>
-            <div className="title">#4 Mysterious Player <span className="muted" style={{ marginLeft: 8 }}>??:??s</span></div>
-            <div className="meta">Sign up to see more</div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const entries = tab === "5" ? entries5 : entries10;
+  const label = tab === "5" ? "5x5" : "10x10";
 
   return (
     <>
-      <div className="leaderboard-cols">
-        {renderColumn("5x5", entries5)}
-        {renderColumn("10x10", entries10)}
+      <div className="card">
+        <div className="card-header-row">
+          <h2>{label} Leaderboard</h2>
+          <div className="row">
+            <button className={`btn sm${tab === "5" ? " primary" : ""}`} onClick={() => setTab("5")}>5x5</button>
+            <button className={`btn sm${tab === "10" ? " primary" : ""}`} onClick={() => setTab("10")}>10x10</button>
+          </div>
+        </div>
+        {loading ? (
+          <div className="muted">Loading...</div>
+        ) : entries.length === 0 ? (
+          <div className="muted">No runs yet</div>
+        ) : (
+          <div className="list">
+            {entries.map((e, i) => (
+              <div key={i} className="item">
+                <div className="title">
+                  {medal(i)} {e.username}
+                  <span className="muted" style={{ marginLeft: 8 }}>
+                    {(e.durationMs / 1000).toFixed(2)}s
+                  </span>
+                </div>
+                <div className="meta">{fmtTime(e.finishedAt)}</div>
+                <div className="row item-actions">
+                  <button className="btn sm" onClick={() => setSignupPrompt(true)}>play</button>
+                  <button className="btn sm" onClick={() => setSignupPrompt(true)}>watch replay</button>
+                </div>
+              </div>
+            ))}
+            <div className="item blurred-item" aria-hidden="true" onClick={() => setSignupPrompt(true)}>
+              <div className="title">#4 Mysterious Player <span className="muted" style={{ marginLeft: 8 }}>??:??s</span></div>
+              <div className="meta">Sign up to see more</div>
+            </div>
+          </div>
+        )}
       </div>
       {signupPrompt && (
         <div
@@ -849,7 +851,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
           </button>
         </div>
         {props.online && (
-          <div className="hint" style={{ marginTop: 8 }}>
+          <div className="hint gap-above">
             Watching a replay means your times won't count for that puzzle's leaderboard.
           </div>
         )}
@@ -1668,13 +1670,13 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
         <h2>Invite Codes</h2>
         <form className="admin-invite-form" onSubmit={createInvite}>
           <input
-            className="admin-input"
+            className="input"
             value={newCode}
             onChange={(e) => setNewCode(e.target.value)}
             placeholder="Code (blank = random)"
           />
           <input
-            className="admin-input admin-input-sm"
+            className="input input-sm"
             value={maxUses}
             onChange={(e) => setMaxUses(e.target.value)}
             placeholder="Max uses"
@@ -1682,7 +1684,7 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
             min="1"
           />
           <input
-            className="admin-input admin-input-sm"
+            className="input input-sm"
             value={expiresInDays}
             onChange={(e) => setExpiresInDays(e.target.value)}
             placeholder="Expires (days)"
@@ -1694,14 +1696,14 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
           </button>
         </form>
         {lastCreatedCode && (
-          <div className="toast ok" style={{ marginTop: 8 }}>
+          <div className="toast ok gap-above">
             Created: <code>{lastCreatedCode}</code>
           </div>
         )}
         {invites.length === 0 ? (
-          <div className="muted" style={{ marginTop: 8 }}>No invite codes</div>
+          <div className="muted gap-above">No invite codes</div>
         ) : (
-          <div className="list" style={{ marginTop: 8 }}>
+          <div className="list gap-above">
             {invites.map((inv) => (
               <div key={inv.id} className="item invite-item">
                 <div style={{ flex: 1 }}>
