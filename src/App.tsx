@@ -1216,7 +1216,6 @@ function Replay(props: {
   const [state, setState] = useState<CellState[]>(
     Array.from({ length: 100 }, () => 0 as CellState)
   );
-  const [dragPct, setDragPct] = useState<number | null>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const wantAutoPlay = useRef(false);
   const timer = useRef<number | null>(null);
@@ -1300,7 +1299,7 @@ function Replay(props: {
     }
   }, [pos]);
 
-  function applyTo(k: number) {
+  function applyTo(k: number, timeMs?: number) {
     if (!puzzle) return;
     const next = Array.from(
       { length: puzzle.width * puzzle.height },
@@ -1313,7 +1312,17 @@ function Replay(props: {
     }
     setState(next);
     setPos(k);
-    setReplayElapsed(k > 0 && moves[k - 1] ? moves[k - 1].atMs : 0);
+    setReplayElapsed(timeMs ?? (k > 0 && moves[k - 1] ? moves[k - 1].atMs : 0));
+  }
+
+  // Find the move index for a given time (number of moves with atMs <= timeMs)
+  function moveIdxAtTime(timeMs: number): number {
+    let idx = 0;
+    for (let j = 0; j < moves.length; j++) {
+      if (moves[j].atMs <= timeMs) idx = j + 1;
+      else break;
+    }
+    return idx;
   }
 
   function play() {
@@ -1487,44 +1496,38 @@ function Replay(props: {
               onMouseDown={(e) => {
                 const track = e.currentTarget;
                 if (playing) pause();
+                let lastIdx = pos;
                 const scrub = (clientX: number) => {
                   const rect = track.getBoundingClientRect();
                   const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-                  setDragPct(pct);
                   const totalMs = moves[moves.length - 1].atMs || 1;
-                  const targetMs = pct * totalMs;
-                  let idx = 0;
-                  for (let j = 0; j < moves.length; j++) {
-                    if (moves[j].atMs <= targetMs) idx = j + 1;
-                    else break;
-                  }
-                  applyTo(idx);
+                  const timeMs = pct * totalMs;
+                  setReplayElapsed(timeMs);
+                  const idx = moveIdxAtTime(timeMs);
+                  if (idx !== lastIdx) { lastIdx = idx; applyTo(idx, timeMs); }
                 };
                 scrub(e.clientX);
                 const onMove = (ev: MouseEvent) => scrub(ev.clientX);
-                const onUp = () => { setDragPct(null); document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+                const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
                 document.addEventListener("mousemove", onMove);
                 document.addEventListener("mouseup", onUp);
               }}
               onTouchStart={(e) => {
                 const track = e.currentTarget;
                 if (playing) pause();
+                let lastIdx = pos;
                 const scrub = (clientX: number) => {
                   const rect = track.getBoundingClientRect();
                   const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-                  setDragPct(pct);
                   const totalMs = moves[moves.length - 1].atMs || 1;
-                  const targetMs = pct * totalMs;
-                  let idx = 0;
-                  for (let j = 0; j < moves.length; j++) {
-                    if (moves[j].atMs <= targetMs) idx = j + 1;
-                    else break;
-                  }
-                  applyTo(idx);
+                  const timeMs = pct * totalMs;
+                  setReplayElapsed(timeMs);
+                  const idx = moveIdxAtTime(timeMs);
+                  if (idx !== lastIdx) { lastIdx = idx; applyTo(idx, timeMs); }
                 };
                 scrub(e.touches[0].clientX);
                 const onMove = (ev: TouchEvent) => { ev.preventDefault(); scrub(ev.touches[0].clientX); };
-                const onEnd = () => { setDragPct(null); document.removeEventListener("touchmove", onMove); document.removeEventListener("touchend", onEnd); };
+                const onEnd = () => { document.removeEventListener("touchmove", onMove); document.removeEventListener("touchend", onEnd); };
                 document.addEventListener("touchmove", onMove, { passive: false });
                 document.addEventListener("touchend", onEnd);
               }}
@@ -1532,9 +1535,7 @@ function Replay(props: {
               <div className="scrubber-track">
                 {(() => {
                   const totalMs = moves[moves.length - 1].atMs || 1;
-                  const fillPct = dragPct != null
-                    ? dragPct * 100
-                    : pos > 0 ? (moves[pos - 1].atMs / totalMs) * 100 : 0;
+                  const fillPct = (replayElapsed / totalMs) * 100;
                   return <div className="scrubber-fill" style={{ width: `${fillPct}%` }} />;
                 })()}
                 {moves.map((m, i) => {
@@ -1543,15 +1544,14 @@ function Replay(props: {
                   return (
                     <div
                       key={m.seq}
-                      className={`scrubber-dot${i + 1 <= pos ? " scrubber-dot-past" : ""}${i + 1 === pos && dragPct == null ? " scrubber-dot-active" : ""}`}
+                      className={`scrubber-dot${i + 1 <= pos ? " scrubber-dot-past" : ""}`}
                       style={{ left: `${pct}%` }}
-                      title={`${(m.atMs / 1000).toFixed(1)}s — ${m.state === 1 ? "fill" : m.state === 2 ? "X" : "clear"} r${Math.floor(m.idx / puzzle.width) + 1}c${(m.idx % puzzle.width) + 1}`}
                     />
                   );
                 })}
                 <div
                   className="scrubber-handle"
-                  style={{ left: `${dragPct != null ? dragPct * 100 : pos > 0 ? (moves[pos - 1].atMs / (moves[moves.length - 1].atMs || 1)) * 100 : 0}%` }}
+                  style={{ left: `${moves.length ? (replayElapsed / (moves[moves.length - 1].atMs || 1)) * 100 : 0}%` }}
                 />
               </div>
             </div>
