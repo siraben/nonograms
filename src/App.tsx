@@ -1041,6 +1041,7 @@ function Replay(props: {
   const [state, setState] = useState<CellState[]>(
     Array.from({ length: 100 }, () => 0 as CellState)
   );
+  const [dragPct, setDragPct] = useState<number | null>(null);
   const timer = useRef<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -1197,6 +1198,7 @@ function Replay(props: {
                 const scrub = (clientX: number) => {
                   const rect = track.getBoundingClientRect();
                   const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+                  setDragPct(pct);
                   const totalMs = moves[moves.length - 1].atMs || 1;
                   const targetMs = pct * totalMs;
                   let idx = 0;
@@ -1208,7 +1210,7 @@ function Replay(props: {
                 };
                 scrub(e.clientX);
                 const onMove = (ev: MouseEvent) => scrub(ev.clientX);
-                const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+                const onUp = () => { setDragPct(null); document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
                 document.addEventListener("mousemove", onMove);
                 document.addEventListener("mouseup", onUp);
               }}
@@ -1218,6 +1220,7 @@ function Replay(props: {
                 const scrub = (clientX: number) => {
                   const rect = track.getBoundingClientRect();
                   const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+                  setDragPct(pct);
                   const totalMs = moves[moves.length - 1].atMs || 1;
                   const targetMs = pct * totalMs;
                   let idx = 0;
@@ -1229,28 +1232,35 @@ function Replay(props: {
                 };
                 scrub(e.touches[0].clientX);
                 const onMove = (ev: TouchEvent) => { ev.preventDefault(); scrub(ev.touches[0].clientX); };
-                const onEnd = () => { document.removeEventListener("touchmove", onMove); document.removeEventListener("touchend", onEnd); };
+                const onEnd = () => { setDragPct(null); document.removeEventListener("touchmove", onMove); document.removeEventListener("touchend", onEnd); };
                 document.addEventListener("touchmove", onMove, { passive: false });
                 document.addEventListener("touchend", onEnd);
               }}
             >
               <div className="scrubber-track">
-                <div
-                  className="scrubber-fill"
-                  style={{ width: `${pos > 0 ? (moves[pos - 1].atMs / (moves[moves.length - 1].atMs || 1)) * 100 : 0}%` }}
-                />
+                {(() => {
+                  const totalMs = moves[moves.length - 1].atMs || 1;
+                  const fillPct = dragPct != null
+                    ? dragPct * 100
+                    : pos > 0 ? (moves[pos - 1].atMs / totalMs) * 100 : 0;
+                  return <div className="scrubber-fill" style={{ width: `${fillPct}%` }} />;
+                })()}
                 {moves.map((m, i) => {
                   const totalMs = moves[moves.length - 1].atMs || 1;
                   const pct = (m.atMs / totalMs) * 100;
                   return (
                     <div
                       key={m.seq}
-                      className={`scrubber-dot${i + 1 <= pos ? " scrubber-dot-past" : ""}${i + 1 === pos ? " scrubber-dot-active" : ""}`}
+                      className={`scrubber-dot${i + 1 <= pos ? " scrubber-dot-past" : ""}${i + 1 === pos && dragPct == null ? " scrubber-dot-active" : ""}`}
                       style={{ left: `${pct}%` }}
                       title={`${(m.atMs / 1000).toFixed(1)}s — ${m.state === 1 ? "fill" : m.state === 2 ? "X" : "clear"} r${Math.floor(m.idx / puzzle.width) + 1}c${(m.idx % puzzle.width) + 1}`}
                     />
                   );
                 })}
+                <div
+                  className="scrubber-handle"
+                  style={{ left: `${dragPct != null ? dragPct * 100 : pos > 0 ? (moves[pos - 1].atMs / (moves[moves.length - 1].atMs || 1)) * 100 : 0}%` }}
+                />
               </div>
             </div>
             <div className="timeline" ref={timelineRef}>
