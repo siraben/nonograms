@@ -104,6 +104,146 @@ function HelpIcon(props: { title?: string }) {
   );
 }
 
+const S = 24; // help diagram cell size
+const G = 1;  // gap between cells
+
+function HelpDiagram(props: {
+  caption: string;
+  cols: number;
+  cells: number[];
+  clueLabels: string[];
+  clueDir: "row" | "col";
+}) {
+  const { cols, cells, clueLabels, clueDir } = props;
+  const rows = Math.ceil(cells.length / cols);
+  const clueW = clueDir === "row" ? clueLabels.length * S : 0;
+  const clueH = clueDir === "col" ? clueLabels.length * S : 0;
+  const w = clueW + cols * (S + G) - G;
+  const h = clueH + rows * (S + G) - G;
+
+  return (
+    <div className="help-diagram">
+      <svg width={w} height={h} aria-label={props.caption}>
+        {clueDir === "row" && clueLabels.map((lbl, i) => (
+          <text
+            key={i}
+            x={i * S + S / 2}
+            y={h / 2}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="var(--text)"
+            fontSize="12"
+            fontWeight="700"
+          >
+            {lbl}
+          </text>
+        ))}
+        {clueDir === "col" && clueLabels.map((lbl, i) => (
+          <text
+            key={i}
+            x={w / 2}
+            y={i * S + S / 2}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="var(--text)"
+            fontSize="12"
+            fontWeight="700"
+          >
+            {lbl}
+          </text>
+        ))}
+        {cells.map((c, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          const x = clueW + col * (S + G);
+          const y = clueH + row * (S + G);
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={y}
+              width={S}
+              height={S}
+              rx={3}
+              fill={c === 1 ? "var(--cell-filled)" : "var(--cell-bg)"}
+              stroke="var(--cell-border)"
+              strokeWidth={1}
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+function HelpGrid(props: {
+  w: number;
+  h: number;
+  cells: number[];
+  rowClues: string[];
+  colClues: string[];
+}) {
+  const { w, h, cells, rowClues, colClues } = props;
+  const clueColW = 40;
+  const clueRowH = 20;
+  const totalW = clueColW + w * (S + G) - G;
+  const totalH = clueRowH + h * (S + G) - G;
+
+  return (
+    <div className="help-diagram">
+      <svg width={totalW} height={totalH} aria-label="Solved example">
+        {colClues.map((lbl, c) => (
+          <text
+            key={`c${c}`}
+            x={clueColW + c * (S + G) + S / 2}
+            y={clueRowH / 2}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="var(--muted)"
+            fontSize="10"
+            fontWeight="700"
+          >
+            {lbl}
+          </text>
+        ))}
+        {rowClues.map((lbl, r) => (
+          <text
+            key={`r${r}`}
+            x={clueColW - 6}
+            y={clueRowH + r * (S + G) + S / 2}
+            textAnchor="end"
+            dominantBaseline="central"
+            fill="var(--muted)"
+            fontSize="10"
+            fontWeight="700"
+          >
+            {lbl}
+          </text>
+        ))}
+        {cells.map((c, i) => {
+          const col = i % w;
+          const row = Math.floor(i / w);
+          const x = clueColW + col * (S + G);
+          const y = clueRowH + row * (S + G);
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={y}
+              width={S}
+              height={S}
+              rx={3}
+              fill={c === 1 ? "var(--cell-filled)" : "var(--cell-bg)"}
+              stroke="var(--cell-border)"
+              strokeWidth={1}
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export default function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute());
   const [user, setUser] = useState<User | null>(null);
@@ -210,21 +350,65 @@ export default function App() {
               </button>
             </div>
             <div className="modal-body">
+              <h3>How to play</h3>
+              <p className="help-text">
+                Fill in cells to match the clue numbers. Each number tells you the length
+                of a consecutive run of filled cells in that row or column. Runs must
+                appear in the given order, separated by at least one empty cell.
+              </p>
+
+              <h3>Reading clues</h3>
+              <p className="help-text">
+                A clue of <b>3 1</b> means: a run of 3 filled cells, then a gap, then 1 filled cell.
+              </p>
+              <HelpDiagram
+                caption="Row clue: 3 1"
+                cols={6}
+                cells={[1,1,1,0,1,0]}
+                clueLabels={["3","1"]}
+                clueDir="row"
+              />
+              <p className="help-text">
+                A clue of <b>2 2</b> means two separate runs of 2.
+              </p>
+              <HelpDiagram
+                caption="Column clue: 2 2"
+                cols={1}
+                cells={[1,1,0,1,1,0]}
+                clueLabels={["2","2"]}
+                clueDir="col"
+              />
+
+              <h3>Solving example</h3>
+              <p className="help-text">
+                Here is a solved 5×5 puzzle (a heart). The clue <b>5</b> means
+                the entire row is filled. The clue <b>1 1</b> means two single cells
+                with a gap between them.
+              </p>
+              <HelpGrid
+                w={5} h={5}
+                cells={[
+                  0,1,0,1,0,
+                  1,1,1,1,1,
+                  1,1,1,1,1,
+                  0,1,1,1,0,
+                  0,0,1,0,0,
+                ]}
+                rowClues={["1 1","5","5","3","1"]}
+                colClues={["2","4","4","4","2"]}
+              />
+
               <h3>Controls</h3>
               <ul>
                 <li>Click to cycle: empty → filled → X → empty</li>
                 <li>Click and drag to paint multiple cells</li>
                 <li>Touch and drag works on mobile</li>
               </ul>
-              <h3>Rules</h3>
-              <ul>
-                <li>Numbers show runs of filled cells in each row/column</li>
-                <li>Use X to mark cells you know are empty</li>
-                <li>Puzzle auto-submits when solved correctly</li>
-              </ul>
-              <h3>Timer + Leaderboard</h3>
+
+              <h3>Timer &amp; Leaderboard</h3>
               <ul>
                 <li>Timer starts when you click Start</li>
+                <li>Puzzle auto-submits when solved correctly</li>
                 <li>Leaderboard is per puzzle size</li>
                 <li>Viewing a replay disqualifies you for that puzzle</li>
               </ul>

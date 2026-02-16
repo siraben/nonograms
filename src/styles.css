@@ -443,7 +443,7 @@ a {
   border-radius: 12px;
   box-shadow: var(--shadow-lg);
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   max-height: 80vh;
   overflow-y: auto;
 }
@@ -508,6 +508,19 @@ a {
   content: "\2022";
   color: var(--muted);
   margin-right: 8px;
+}
+
+.help-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  margin: 4px 0 8px;
+}
+
+.help-diagram {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 14px;
 }
 
 .start-gate {
