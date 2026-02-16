@@ -510,11 +510,11 @@ export default function App() {
       )}
 
       {authedRoute.name === "play" && (
-        <Play attemptId={authedRoute.attemptId} onToast={setToast} />
+        <Play attemptId={authedRoute.attemptId} onToast={setToast} currentUser={user?.username} />
       )}
 
       {authedRoute.name === "replay" && (
-        <Replay attemptId={authedRoute.attemptId} onToast={setToast} />
+        <Replay attemptId={authedRoute.attemptId} onToast={setToast} currentUser={user?.username} />
       )}
     </div>
   );
@@ -968,6 +968,7 @@ function OfflinePlay(props: {
 function Play(props: {
   attemptId: string;
   onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+  currentUser?: string;
 }) {
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
@@ -1048,6 +1049,7 @@ function Play(props: {
         skipConfirm
         autoPlay
         finishedSize={puzzle.width}
+        currentUser={props.currentUser}
       />
     );
   }
@@ -1103,6 +1105,7 @@ function Replay(props: {
   skipConfirm?: boolean;
   autoPlay?: boolean;
   finishedSize?: number;
+  currentUser?: string;
 }) {
   const [confirmed, setConfirmed] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -1259,7 +1262,10 @@ function Replay(props: {
     const url = `${location.origin}/s/${props.attemptId}`;
     const size = puzzle ? `${puzzle.width}x${puzzle.height}` : "?x?";
     const time = meta?.durationMs ? `${(meta.durationMs / 1000).toFixed(2)}s` : "?s";
-    const text = `I solved a ${size} nonogram in ${time}! Try to beat my time or watch my replay at ${url}`;
+    const isOwn = props.currentUser && meta?.username === props.currentUser;
+    const who = isOwn ? "I" : (meta?.username ?? "Someone");
+    const verb = isOwn ? "Try to beat my time or watch my replay" : "Watch the replay";
+    const text = `${who} solved a ${size} nonogram in ${time}! ${verb} at ${url}`;
     await navigator.clipboard.writeText(text);
     props.onToast({ kind: "ok", msg: "Copied to clipboard!" });
   }
