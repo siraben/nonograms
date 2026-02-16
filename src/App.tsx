@@ -16,7 +16,8 @@ type Route =
   | { name: "play"; attemptId: string }
   | { name: "replay"; attemptId: string }
   | { name: "offline-play"; size: number }
-  | { name: "privacy" };
+  | { name: "privacy" }
+  | { name: "my-games" };
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -33,6 +34,7 @@ function parseRoute(): Route {
   if (parts[0] === "a" && parts[1]) return { name: "play", attemptId: parts[1] };
   if (parts[0] === "replay" && parts[1]) return { name: "replay", attemptId: parts[1] };
   if (parts[0] === "privacy") return { name: "privacy" };
+  if (parts[0] === "my-games") return { name: "my-games" };
   if (parts[0] === "offline" && parts[1]) {
     const size = parseInt(parts[1], 10);
     if (size === 5 || size === 10) return { name: "offline-play", size };
@@ -384,6 +386,9 @@ export default function App() {
           {!online && <div className="pill pill-muted">offline</div>}
           {user && (
             <>
+              <button className="btn sm" onClick={() => nav("/my-games")}>
+                my games
+              </button>
               {user.isAdmin && (
                 <button className="btn sm" onClick={() => nav("/admin")}>
                   admin
@@ -523,6 +528,8 @@ export default function App() {
       )}
 
       {!busy && authedRoute.name === "admin" && <AdminDashboard onToast={setToast} />}
+
+      {!busy && authedRoute.name === "my-games" && <MyGames onToast={setToast} />}
 
       {!busy && authedRoute.name === "home" && <Home online={online} onToast={setToast} />}
 
@@ -1658,6 +1665,134 @@ function Replay(props: {
               })}
             </div>
           </>
+        )}
+      </div>
+    </>
+  );
+}
+
+type GameEntry = {
+  attemptId: string;
+  puzzleId: string;
+  width: number;
+  height: number;
+  status: "in_progress" | "completed" | "abandoned";
+  durationMs: number | null;
+  createdAt: string;
+  finishedAt: string | null;
+};
+
+function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
+  const [games, setGames] = useState<GameEntry[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    (async () => {
+      try {
+        const r = await api<{ games: GameEntry[]; hasMore: boolean; page: number }>(
+          `/api/games?page=${page}`
+        );
+        setGames(r.games);
+        setHasMore(r.hasMore);
+      } catch (err) {
+        props.onToast({ kind: "bad", msg: (err as Error).message });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [page]);
+
+  async function newGame(puzzleId: string) {
+    props.onToast(null);
+    try {
+      const r = await api<{ attempt: { id: string } }>("/api/attempts/new", {
+        method: "POST",
+        json: { puzzleId },
+      });
+      nav(`/a/${r.attempt.id}`);
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    }
+  }
+
+  const statusLabel = (s: GameEntry["status"]) =>
+    s === "in_progress" ? "In progress" : s === "completed" ? "Completed" : "Abandoned";
+
+  return (
+    <>
+      <div className="back-nav">
+        <button className="btn" onClick={() => nav("/")}>
+          &larr; Back
+        </button>
+      </div>
+      <div className="card">
+        <div className="card-header-row">
+          <h2>My Games</h2>
+          {(hasMore || page > 0) && (
+            <div className="pagination">
+              <button
+                className="btn sm icon-btn"
+                disabled={page === 0}
+                onClick={() => setPage(page - 1)}
+                aria-label="Previous page"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+              <span className="pagination-info">{page + 1}</span>
+              <button
+                className="btn sm icon-btn"
+                disabled={!hasMore}
+                onClick={() => setPage(page + 1)}
+                aria-label="Next page"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            </div>
+          )}
+        </div>
+        {loading ? (
+          <div className="muted">Loading...</div>
+        ) : games.length === 0 ? (
+          <div className="muted">No games yet. Start one from the home page!</div>
+        ) : (
+          <div className="list">
+            {games.map((g) => (
+              <div key={g.attemptId} className="item">
+                <div className="title">
+                  {g.width}x{g.height}
+                  <span className="muted" style={{ marginLeft: 8 }}>
+                    {statusLabel(g.status)}
+                  </span>
+                  {g.status === "completed" && g.durationMs != null && (
+                    <span className="muted" style={{ marginLeft: 8 }}>
+                      {(g.durationMs / 1000).toFixed(2)}s
+                    </span>
+                  )}
+                </div>
+                <div className="meta">{fmtTime(g.createdAt)}</div>
+                <div className="row item-actions">
+                  {g.status === "in_progress" && (
+                    <button className="btn sm" onClick={() => nav(`/a/${g.attemptId}`)}>
+                      continue
+                    </button>
+                  )}
+                  {g.status === "completed" && (
+                    <>
+                      <button className="btn sm" onClick={() => nav(`/replay/${g.attemptId}`)}>
+                        watch replay
+                      </button>
+                      <button className="btn sm" onClick={() => void newGame(g.puzzleId)}>
+                        play again
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </>
