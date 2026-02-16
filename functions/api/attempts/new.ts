@@ -58,10 +58,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     `INSERT INTO attempts (id, puzzle_id, user_id, created_at, eligible, completed, current_state_json)
      VALUES (?, ?, ?, ?,
        CASE WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
+                 OR EXISTS(SELECT 1 FROM attempts WHERE user_id = ? AND puzzle_id = ? AND started_at IS NOT NULL)
             THEN 0 ELSE 1 END,
        0, ?)`
   )
-    .bind(attemptId, puzzleId, authed.userId, now, authed.userId, puzzleId, JSON.stringify(state))
+    .bind(attemptId, puzzleId, authed.userId, now, authed.userId, puzzleId, authed.userId, puzzleId, JSON.stringify(state))
     .run();
 
   const eligible = await env.DB.prepare("SELECT eligible FROM attempts WHERE id = ?")

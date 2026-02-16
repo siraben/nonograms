@@ -65,6 +65,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
      SET current_state_json = ?, completed = 1, finished_at = ?, duration_ms = ?,
          eligible = CASE WHEN eligible = 0 THEN 0
                          WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
+                         THEN 0
+                         WHEN EXISTS(SELECT 1 FROM attempts WHERE user_id = ? AND puzzle_id = ? AND id != ? AND started_at IS NOT NULL)
                          THEN 0 ELSE eligible END
      WHERE id = ? AND completed = 0`
   ).bind(
@@ -73,6 +75,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     durationMs,
     authed.userId,
     a.puzzleId,
+    authed.userId,
+    a.puzzleId,
+    attemptId,
     attemptId
   ).run();
 
