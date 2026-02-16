@@ -25,3 +25,10 @@ export async function register(
 export async function logout() {
   await api("/api/auth/logout", { method: "POST" });
 }
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  await api("/api/auth/change-password", {
+    method: "POST",
+    json: { currentPassword, newPassword },
+  });
+}

@@ -705,6 +705,13 @@ a {
   padding: 14px 36px;
 }
 
+.pill-clickable {
+  cursor: pointer;
+}
+.pill-clickable:hover {
+  filter: brightness(0.92);
+}
+
 .pill-muted {
   background: var(--danger-light);
   color: var(--danger);

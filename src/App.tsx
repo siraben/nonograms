@@ -296,6 +296,7 @@ export default function App() {
   const [busy, setBusy] = useState(true);
   const [toast, setToast] = useState<{ kind: "ok" | "bad"; msg: string } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [changePwOpen, setChangePwOpen] = useState(false);
   const online = useOnline();
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("nonogram-theme");
@@ -379,7 +380,7 @@ export default function App() {
                   admin
                 </button>
               )}
-              <div className="pill">{user.username}</div>
+              <div className="pill pill-clickable" onClick={() => setChangePwOpen(true)}>{user.username}</div>
               <button className="btn danger" onClick={doLogout}>
                 logout
               </button>
@@ -471,6 +472,13 @@ export default function App() {
         </div>
       )}
 
+      {changePwOpen && (
+        <ChangePasswordModal
+          onClose={() => setChangePwOpen(false)}
+          onToast={setToast}
+        />
+      )}
+
       {toast && <div className={`toast ${toast.kind}`}>{toast.msg}</div>}
 
       {authedRoute.name === "login" && (
@@ -516,6 +524,87 @@ export default function App() {
       {authedRoute.name === "replay" && (
         <Replay attemptId={authedRoute.attemptId} onToast={setToast} currentUser={user?.username} />
       )}
+    </div>
+  );
+}
+
+function ChangePasswordModal(props: {
+  onClose: () => void;
+  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+}) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") props.onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    props.onToast(null);
+    setSubmitting(true);
+    try {
+      await Auth.changePassword(currentPassword, newPassword);
+      props.onToast({ kind: "ok", msg: "Password changed" });
+      props.onClose();
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="modal-overlay"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) props.onClose();
+      }}
+    >
+      <div className="modal" role="dialog" aria-modal="true" aria-label="Change password">
+        <div className="modal-head">
+          <div className="modal-title">Change password</div>
+          <button className="modal-close" onClick={props.onClose} aria-label="Close">
+            &times;
+          </button>
+        </div>
+        <div className="modal-body">
+          <form onSubmit={submit}>
+            <div className="field">
+              <label>Current password</label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="field">
+              <label>New password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="row">
+              <button className="btn primary" disabled={submitting}>
+                {submitting ? "Saving..." : "Save"}
+              </button>
+              <button type="button" className="btn" onClick={props.onClose}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
