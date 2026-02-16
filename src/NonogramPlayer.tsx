@@ -56,6 +56,8 @@ export default function NonogramPlayer(props: {
   const [elapsed, setElapsed] = useState(0);
   const [hoverRow, setHoverRow] = useState(-1);
   const [hoverCol, setHoverCol] = useState(-1);
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const inFlight = useRef(0);
   const pendingMoves = useRef<Promise<unknown>[]>([]);
   const timerRef = useRef<number | null>(null);
@@ -114,23 +116,24 @@ export default function NonogramPlayer(props: {
       if (prev[idx] === newState) return prev;
       const next = prev.slice();
       next[idx] = newState;
-      void postMove(idx, newState);
       return next;
     });
+    void postMove(idx, newState);
   }
 
   // Mousedown on a cell: cycle it and start drag-painting
   function onCellDown(idx: number) {
     if (props.readonly || solved) return;
     dragging.current = true;
+    const cur = stateRef.current[idx];
+    const newVal = cycleState(cur);
+    paintValue.current = newVal;
     setState((prev) => {
-      const newVal = cycleState(prev[idx]);
-      paintValue.current = newVal;
       const next = prev.slice();
       next[idx] = newVal;
-      void postMove(idx, newVal);
       return next;
     });
+    void postMove(idx, newVal);
   }
 
   // Mouse enters cell while dragging: paint with same value
@@ -146,8 +149,15 @@ export default function NonogramPlayer(props: {
     const p = api(
       `/api/attempts/${encodeURIComponent(props.attemptId)}/move`,
       { method: "POST", json: { idx, state: st } }
-    ).catch((err) => {
+    ).catch(async (err) => {
       props.onToast({ kind: "bad", msg: (err as Error).message });
+      // Reconcile: refetch server state so client doesn't diverge
+      try {
+        const r = await api<{ attempt: { state: CellState[] } }>(
+          `/api/attempts/${encodeURIComponent(props.attemptId)}`
+        );
+        setState(r.attempt.state);
+      } catch { /* already showing error toast */ }
     }).finally(() => {
       pendingMoves.current = pendingMoves.current.filter((x) => x !== p);
       inFlight.current--;
@@ -210,14 +220,15 @@ export default function NonogramPlayer(props: {
     if (idx === null || idx < 0) return;
     dragging.current = true;
     lastTouchIdx.current = idx;
+    const cur = stateRef.current[idx];
+    const newVal = cycleState(cur);
+    paintValue.current = newVal;
     setState((prev) => {
-      const newVal = cycleState(prev[idx]);
-      paintValue.current = newVal;
       const next = prev.slice();
       next[idx] = newVal;
-      void postMove(idx, newVal);
       return next;
     });
+    void postMove(idx, newVal);
     setHoverRow(Math.floor(idx / puzzle.width));
     setHoverCol(idx % puzzle.width);
   }
