@@ -39,6 +39,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   // Enforce invite codes by default (friends-only). Set INVITES_REQUIRED=0 to allow open registration.
   // Validate + consume invite code after username check to avoid wasting codes on duplicate usernames.
+  let inviteCodeId: string | null = null;
   if (env.INVITES_REQUIRED !== "0") {
     const code = (body.inviteCode || "").trim();
     if (!code) return err(403, "invite code required");
@@ -68,6 +69,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
       .bind(found.id, nowIso)
       .run();
     if ((upd.meta?.changes || 0) !== 1) return err(403, "invite code exhausted");
+    inviteCodeId = found.id;
   }
 
   const { saltB64, hashB64, iters } = await hashPassword(password);
@@ -76,9 +78,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   try {
     await env.DB.prepare(
-      "INSERT INTO users (id, username, pass_salt_b64, pass_hash_b64, pass_iters, is_admin, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)"
+      "INSERT INTO users (id, username, pass_salt_b64, pass_hash_b64, pass_iters, is_admin, created_at, invite_code_id) VALUES (?, ?, ?, ?, ?, 0, ?, ?)"
     )
-      .bind(id, username, saltB64, hashB64, iters, now)
+      .bind(id, username, saltB64, hashB64, iters, now, inviteCodeId)
       .run();
   } catch (e) {
     const msg = String(e);
