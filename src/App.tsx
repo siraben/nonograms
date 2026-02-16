@@ -1218,7 +1218,7 @@ function Replay(props: {
   );
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const wantAutoPlay = useRef(false);
-  const timer = useRef<number | null>(null);
+  const raf = useRef<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   // Check if user already viewed this puzzle's replay
@@ -1254,7 +1254,7 @@ function Replay(props: {
     (async () => {
       setPlaying(false);
       setPos(0);
-      if (timer.current) clearTimeout(timer.current);
+      if (raf.current) cancelAnimationFrame(raf.current);
       try {
         const r = await api<{
           puzzle: Puzzle;
@@ -1277,7 +1277,7 @@ function Replay(props: {
       }
     })();
     return () => {
-      if (timer.current) clearTimeout(timer.current);
+      if (raf.current) cancelAnimationFrame(raf.current);
     };
   }, [props.attemptId, confirmed]);
 
@@ -1327,38 +1327,42 @@ function Replay(props: {
 
   function play() {
     if (!puzzle || !moves.length) return;
-    if (timer.current) clearTimeout(timer.current);
+    if (raf.current) cancelAnimationFrame(raf.current);
     setPlaying(true);
 
+    const endMs = moves[moves.length - 1].atMs;
     // Scale replay: cap total duration between 10s and 45s
-    const totalMs = moves[moves.length - 1].atMs - moves[0].atMs;
-    const scale = totalMs < 10000 ? 10000 / Math.max(totalMs, 1) :
-                  totalMs > 45000 ? 45000 / totalMs : 1;
+    const span = endMs - moves[0].atMs;
+    const baseScale = span < 10000 ? 10000 / Math.max(span, 1) :
+                      span > 45000 ? 45000 / span : 1;
 
-    let i = pos;
-    function step() {
-      i++;
-      if (i > moves.length) {
+    // Start from current elapsed position
+    let simMs = replayElapsed;
+    let lastIdx = pos;
+    let prev: number | null = null;
+
+    function frame(ts: number) {
+      if (prev === null) { prev = ts; raf.current = requestAnimationFrame(frame); return; }
+      const dt = ts - prev;
+      prev = ts;
+      const scale = realtimeRef.current ? 1 : baseScale;
+      simMs += dt / scale;
+      if (simMs >= endMs) {
+        applyTo(moves.length, endMs);
         setPlaying(false);
         if (meta?.durationMs) setReplayElapsed(meta.durationMs);
         return;
       }
-      applyTo(i);
-      if (i < moves.length) {
-        const raw = moves[i].atMs - moves[i - 1].atMs;
-        let delay = realtimeRef.current ? raw : Math.min(raw * scale, 1000);
-        timer.current = window.setTimeout(step, delay);
-      } else {
-        // Last move applied, finish
-        setPlaying(false);
-        if (meta?.durationMs) setReplayElapsed(meta.durationMs);
-      }
+      setReplayElapsed(simMs);
+      const idx = moveIdxAtTime(simMs);
+      if (idx !== lastIdx) { lastIdx = idx; applyTo(idx, simMs); }
+      raf.current = requestAnimationFrame(frame);
     }
-    step();
+    raf.current = requestAnimationFrame(frame);
   }
 
   function pause() {
-    if (timer.current) clearTimeout(timer.current);
+    if (raf.current) cancelAnimationFrame(raf.current);
     setPlaying(false);
   }
 
