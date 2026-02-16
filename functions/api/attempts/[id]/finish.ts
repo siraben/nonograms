@@ -64,17 +64,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     .first();
   const eligible = viewed ? 0 : a.eligible;
 
-  await env.DB.batch([
-    env.DB.prepare(
-      "UPDATE attempts SET current_state_json = ?, completed = 1, finished_at = ?, duration_ms = ?, eligible = ? WHERE id = ?"
-    ).bind(
-      JSON.stringify(state),
-      now.toISOString(),
-      durationMs,
-      eligible,
-      attemptId
-    )
-  ]);
+  const upd = await env.DB.prepare(
+    "UPDATE attempts SET current_state_json = ?, completed = 1, finished_at = ?, duration_ms = ?, eligible = ? WHERE id = ? AND completed = 0"
+  ).bind(
+    JSON.stringify(state),
+    now.toISOString(),
+    durationMs,
+    eligible,
+    attemptId
+  ).run();
+
+  if ((upd.meta?.changes || 0) !== 1) return err(409, "attempt already finished");
 
   return json({ solved: true, durationMs, eligible: eligible === 1 });
 };

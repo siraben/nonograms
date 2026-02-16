@@ -36,9 +36,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   if (a.startedAt) return err(409, "attempt already started");
 
   const now = new Date().toISOString();
-  await env.DB.prepare("UPDATE attempts SET started_at = ? WHERE id = ?")
+  const upd = await env.DB.prepare("UPDATE attempts SET started_at = ? WHERE id = ? AND started_at IS NULL")
     .bind(now, attemptId)
     .run();
+  if ((upd.meta?.changes || 0) !== 1) return err(409, "attempt already started");
 
   return json({
     startedAt: now,

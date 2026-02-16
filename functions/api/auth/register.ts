@@ -28,7 +28,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     if (!cap.ok) return err(403, `captcha: ${cap.reason || "failed"}`);
   }
 
+  const username = (body.username || "").trim().toLowerCase();
+  const password = body.password || "";
+
+  if (!/^[a-z0-9_]{3,24}$/.test(username)) return err(400, "username must be 3-24 chars: a-z 0-9 _");
+  if (password.length < 8) return err(400, "password must be at least 8 chars");
+
+  const exists = await env.DB.prepare("SELECT 1 FROM users WHERE username = ?").bind(username).first();
+  if (exists) return err(409, "username taken");
+
   // Enforce invite codes by default (friends-only). Set INVITES_REQUIRED=0 to allow open registration.
+  // Validate + consume invite code after username check to avoid wasting codes on duplicate usernames.
   if (env.INVITES_REQUIRED !== "0") {
     const code = (body.inviteCode || "").trim();
     if (!code) return err(403, "invite code required");
@@ -60,24 +70,21 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     if ((upd.meta?.changes || 0) !== 1) return err(403, "invite code exhausted");
   }
 
-  const username = (body.username || "").trim().toLowerCase();
-  const password = body.password || "";
-
-  if (!/^[a-z0-9_]{3,24}$/.test(username)) return err(400, "username must be 3-24 chars: a-z 0-9 _");
-  if (password.length < 8) return err(400, "password must be at least 8 chars");
-
-  const exists = await env.DB.prepare("SELECT 1 FROM users WHERE username = ?").bind(username).first();
-  if (exists) return err(409, "username taken");
-
   const { saltB64, hashB64, iters } = await hashPassword(password);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  await env.DB.prepare(
-    "INSERT INTO users (id, username, pass_salt_b64, pass_hash_b64, pass_iters, is_admin, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)"
-  )
-    .bind(id, username, saltB64, hashB64, iters, now)
-    .run();
+  try {
+    await env.DB.prepare(
+      "INSERT INTO users (id, username, pass_salt_b64, pass_hash_b64, pass_iters, is_admin, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)"
+    )
+      .bind(id, username, saltB64, hashB64, iters, now)
+      .run();
+  } catch (e) {
+    const msg = String(e);
+    if (msg.includes("UNIQUE") || msg.includes("unique")) return err(409, "username taken");
+    throw e;
+  }
 
   const s = await createSession(env, request, id, true);
   const res = json({ ok: true });

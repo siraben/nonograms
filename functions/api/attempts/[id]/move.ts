@@ -37,22 +37,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   const startedAt = new Date(row.startedAt!);
   const atMs = now.getTime() - startedAt.getTime();
 
-  // Seq number.
-  const nextSeq = await env.DB.prepare("SELECT COALESCE(MAX(seq), 0) + 1 as s FROM attempt_moves WHERE attempt_id = ?")
-    .bind(attemptId)
-    .first<{ s: number }>();
-  const seq = nextSeq?.s || 1;
-
   // Use json_set to atomically update the single cell, avoiding read-modify-write races.
+  // Seq is computed inline to avoid a separate read-then-insert race on the sequence number.
   const path = `$[${idx}]`;
   await env.DB.batch([
     env.DB.prepare(
-      "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-    ).bind(attemptId, seq, atMs, idx, st, now.toISOString()),
+      "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, (SELECT COALESCE(MAX(seq), 0) + 1 FROM attempt_moves WHERE attempt_id = ?), ?, ?, ?, ?)"
+    ).bind(attemptId, attemptId, atMs, idx, st, now.toISOString()),
     env.DB.prepare(
       "UPDATE attempts SET current_state_json = json_set(current_state_json, ?, ?) WHERE id = ?"
     ).bind(path, st, attemptId)
   ]);
 
-  return json({ ok: true, seq, atMs });
+  return json({ ok: true, atMs });
 };
