@@ -72,6 +72,8 @@ export default function NonogramPlayer(props: {
 
   useEffect(() => {
     setState(props.initialState);
+    setSolved(false);
+    finishing.current = false;
   }, [props.attemptId, props.initialState]);
 
   // Timer — starts immediately since startedAt is set at attempt creation
