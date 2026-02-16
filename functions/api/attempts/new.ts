@@ -48,24 +48,27 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
       .run();
   }
 
-  const viewed = await env.DB.prepare("SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?")
-    .bind(authed.userId, puzzleId)
-    .first();
-  const eligible = viewed ? 0 : 1;
-
   const puzzleRow = await env.DB.prepare("SELECT width, height FROM puzzles WHERE id = ?").bind(puzzleId).first<{ width: number; height: number }>();
   if (!puzzleRow) return err(500, "puzzle missing");
 
   const attemptId = crypto.randomUUID();
   const state = Array.from({ length: puzzleRow.width * puzzleRow.height }, () => 0);
+  // Compute eligibility atomically via subquery to avoid TOCTTOU race with concurrent replay views.
   await env.DB.prepare(
-    "INSERT INTO attempts (id, puzzle_id, user_id, created_at, eligible, completed, current_state_json) VALUES (?, ?, ?, ?, ?, 0, ?)"
+    `INSERT INTO attempts (id, puzzle_id, user_id, created_at, eligible, completed, current_state_json)
+     VALUES (?, ?, ?, ?,
+       CASE WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
+            THEN 0 ELSE 1 END,
+       0, ?)`
   )
-    .bind(attemptId, puzzleId, authed.userId, now, eligible, JSON.stringify(state))
+    .bind(attemptId, puzzleId, authed.userId, now, authed.userId, puzzleId, JSON.stringify(state))
     .run();
 
+  const eligible = await env.DB.prepare("SELECT eligible FROM attempts WHERE id = ?")
+    .bind(attemptId).first<{ eligible: number }>();
+
   return json({
-    attempt: { id: attemptId, puzzleId, eligible: eligible === 1, state },
+    attempt: { id: attemptId, puzzleId, eligible: eligible?.eligible === 1, state },
     puzzle: { width: puzzleRow.width, height: puzzleRow.height }
   });
 };

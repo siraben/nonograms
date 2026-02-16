@@ -53,28 +53,34 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   const durationMs = Math.max(0, now.getTime() - startedAt.getTime());
 
   if (!v.solved) {
-    await env.DB.prepare("UPDATE attempts SET current_state_json = ? WHERE id = ?")
+    await env.DB.prepare("UPDATE attempts SET current_state_json = ? WHERE id = ? AND completed = 0")
       .bind(JSON.stringify(state), attemptId)
       .run();
     return json({ solved: false, wrongRows: v.wrongRows, wrongCols: v.wrongCols });
   }
 
-  const viewed = await env.DB.prepare("SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?")
-    .bind(authed.userId, a.puzzleId)
-    .first();
-  const eligible = viewed ? 0 : a.eligible;
-
+  // Compute eligibility atomically to avoid TOCTTOU race with concurrent replay views.
   const upd = await env.DB.prepare(
-    "UPDATE attempts SET current_state_json = ?, completed = 1, finished_at = ?, duration_ms = ?, eligible = ? WHERE id = ? AND completed = 0"
+    `UPDATE attempts
+     SET current_state_json = ?, completed = 1, finished_at = ?, duration_ms = ?,
+         eligible = CASE WHEN eligible = 0 THEN 0
+                         WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
+                         THEN 0 ELSE eligible END
+     WHERE id = ? AND completed = 0`
   ).bind(
     JSON.stringify(state),
     now.toISOString(),
     durationMs,
-    eligible,
+    authed.userId,
+    a.puzzleId,
     attemptId
   ).run();
 
   if ((upd.meta?.changes || 0) !== 1) return err(409, "attempt already finished");
 
-  return json({ solved: true, durationMs, eligible: eligible === 1 });
+  // Read back the final eligible value set by the atomic UPDATE.
+  const final = await env.DB.prepare("SELECT eligible, duration_ms as durationMs FROM attempts WHERE id = ?")
+    .bind(attemptId).first<{ eligible: number; durationMs: number }>();
+
+  return json({ solved: true, durationMs, eligible: final?.eligible === 1 });
 };
