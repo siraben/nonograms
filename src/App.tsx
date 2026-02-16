@@ -305,6 +305,13 @@ export default function App() {
   });
 
   useEffect(() => {
+    if (!toast) return;
+    const ms = toast.kind === "ok" ? 3000 : 5000;
+    const id = setTimeout(() => setToast(null), ms);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("nonogram-theme", theme);
   }, [theme]);
