@@ -16,10 +16,10 @@ type Route =
   | { name: "replay"; attemptId: string }
   | { name: "offline-play"; size: number };
 
-function fmtUtc(iso: string): string {
+function fmtTime(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function parseRoute(): Route {
@@ -738,7 +738,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
                   </div>
                   <div className="meta">
                     {e.width}x{e.height} {e.puzzleId.slice(0, 8)} &mdash;{" "}
-                    {fmtUtc(e.finishedAt)}
+                    {fmtTime(e.finishedAt)}
                   </div>
                   <div className="row item-actions">
                     <button
