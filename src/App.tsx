@@ -1339,7 +1339,7 @@ function Replay(props: {
             Reset
           </button>
           <button
-            className="icon-btn"
+            className="btn icon-btn"
             onClick={shareReplay}
             aria-label="Share replay"
             title="Share replay"
@@ -1366,6 +1366,11 @@ function Replay(props: {
               "Loading..."
             )}
           </span>
+          {props.finishedSize && (
+            <button className="btn primary" style={{ marginLeft: "auto" }} onClick={startNewGame}>
+              {props.finishedSize}&times;{props.finishedSize}
+            </button>
+          )}
         </div>
         {puzzle && (
           <NonogramPlayer
@@ -1479,13 +1484,6 @@ function Replay(props: {
           </>
         )}
       </div>
-      {props.finishedSize && (
-        <div className="card text-center">
-          <button className="btn primary lg" onClick={startNewGame}>
-            {props.finishedSize}&times;{props.finishedSize}
-          </button>
-        </div>
-      )}
     </>
   );
 }
