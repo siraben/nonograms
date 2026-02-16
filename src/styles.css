@@ -818,3 +818,15 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+.site-footer {
+  text-align: center;
+  padding: 24px 0 8px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.site-footer a {
+  text-decoration: underline;
+}
