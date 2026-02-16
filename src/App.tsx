@@ -488,9 +488,11 @@ export default function App() {
 
       {toast && <div className={`toast ${toast.kind}`}>{toast.msg}</div>}
 
-      {busy && <div className="card"><div className="muted">Loading...</div></div>}
+      {busy && route.name !== "login" && route.name !== "register" && route.name !== "offline-play" && route.name !== "replay" && (
+        <div className="card"><div className="muted">Loading...</div></div>
+      )}
 
-      {!busy && authedRoute.name === "login" && (
+      {authedRoute.name === "login" && (
         <div className={online ? "login-layout" : undefined}>
           <AuthCard
             mode="login"
@@ -504,7 +506,7 @@ export default function App() {
         </div>
       )}
 
-      {!busy && authedRoute.name === "register" && (
+      {authedRoute.name === "register" && (
         <div className={online ? "login-layout" : undefined}>
           <AuthCard
             mode="register"
@@ -522,7 +524,7 @@ export default function App() {
 
       {!busy && authedRoute.name === "home" && <Home online={online} onToast={setToast} />}
 
-      {!busy && authedRoute.name === "offline-play" && (
+      {authedRoute.name === "offline-play" && (
         <OfflinePlay size={authedRoute.size} onToast={setToast} />
       )}
 
@@ -530,7 +532,7 @@ export default function App() {
         <Play attemptId={authedRoute.attemptId} onToast={setToast} currentUser={user?.username} />
       )}
 
-      {!busy && authedRoute.name === "replay" && (
+      {authedRoute.name === "replay" && (
         <Replay attemptId={authedRoute.attemptId} onToast={setToast} currentUser={user?.username} />
       )}
     </div>
