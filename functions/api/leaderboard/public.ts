@@ -34,10 +34,16 @@ type Row = {
 };
 
 function periodCutoff(period: string | null): string | null {
+  const now = new Date();
   switch (period) {
-    case "day": return new Date(Date.now() - 86_400_000).toISOString();
-    case "week": return new Date(Date.now() - 7 * 86_400_000).toISOString();
-    case "month": return new Date(Date.now() - 30 * 86_400_000).toISOString();
+    case "day":
+      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+    case "week": {
+      const daysSinceMonday = (now.getUTCDay() + 6) % 7;
+      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceMonday)).toISOString();
+    }
+    case "month":
+      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
     default: return null;
   }
 }

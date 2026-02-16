@@ -789,7 +789,7 @@ function PublicLeaderboard() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await api<{ leaderboard5: PublicEntry[]; leaderboard10: PublicEntry[] }>("/api/leaderboard/public");
+        const r = await api<{ leaderboard5: PublicEntry[]; leaderboard10: PublicEntry[] }>("/api/leaderboard/public?period=day");
         setEntries5(r.leaderboard5);
         setEntries10(r.leaderboard10);
       } catch {
@@ -808,7 +808,7 @@ function PublicLeaderboard() {
     <>
       <div className="card">
         <div className="card-header-row">
-          <h2>{label} Leaderboard</h2>
+          <h2>Today's {label}</h2>
           <div className="row">
             <button className={`btn sm${tab === "5" ? " primary" : ""}`} onClick={() => setTab("5")}>5x5</button>
             <button className={`btn sm${tab === "10" ? " primary" : ""}`} onClick={() => setTab("10")}>10x10</button>
@@ -1222,10 +1222,10 @@ function Replay(props: {
     (async () => {
       setChecking(true);
       try {
-        const r = await api<{ alreadyViewed: boolean }>(
+        const r = await api<{ alreadyViewed: boolean; isOwn: boolean }>(
           `/api/replay/${encodeURIComponent(props.attemptId)}/check`
         );
-        if (r.alreadyViewed) {
+        if (r.alreadyViewed || r.isOwn) {
           setConfirmed(true);
         } else {
           setShowConfirmModal(true);
