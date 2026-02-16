@@ -824,10 +824,10 @@ function AuthCard(props: {
         <div className="hint">Or play offline without an account:</div>
         <div className="btn-group" style={{ marginTop: 6 }}>
           <button type="button" className="btn sm" onClick={() => nav("/offline/5")}>
-            Offline 5x5
+            5x5
           </button>
           <button type="button" className="btn sm" onClick={() => nav("/offline/10")}>
-            Offline 10x10
+            10x10
           </button>
         </div>
       </div>
