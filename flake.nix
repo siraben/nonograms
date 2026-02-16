@@ -27,5 +27,22 @@
             echo "  OpenTofu: $(tofu --version | head -1)"
           '';
         };
+
+        devShells.analysis = pkgs.mkShell {
+          packages = with pkgs; [
+            (python3.withPackages (ps: with ps; [
+              numpy
+              pandas
+              matplotlib
+              jupyter
+              ipykernel
+            ]))
+          ];
+
+          shellHook = ''
+            echo "Analysis environment loaded"
+            echo "  Python: $(python3 --version)"
+          '';
+        };
       });
 }

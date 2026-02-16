@@ -1,6 +1,21 @@
-# nonogram-server
+# nonogram
 
 Friends-only nonogram web app on Cloudflare Pages + D1.
+
+![nonogram](public/og.png)
+
+## Features
+
+- **5x5 and 10x10 puzzles** — procedurally generated with a seeded Markov chain
+- **Live leaderboards** — SSE-powered real-time updates, filterable by day/week/month/all-time
+- **Replay system** — watch any completed solve move-by-move with play/pause, scrubber, and scaled playback
+- **Shareable links** — share replays with OG embed previews
+- **Fair leaderboard eligibility** — only first attempts count; viewing replays or re-attempting a puzzle disqualifies you
+- **Offline mode** — play locally-generated puzzles without an account
+- **Invite-only registration** — admin-managed invite codes with usage limits and expiry
+- **Dark mode** — theme toggle with persistence
+- **Mobile-friendly** — touch support with drag painting
+- **Admin dashboard** — user stats, recent activity, invite management, stale attempt cleanup
 
 ## Local dev
 
