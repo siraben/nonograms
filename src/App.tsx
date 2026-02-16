@@ -1031,6 +1031,8 @@ function Replay(props: {
   onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
 }) {
   const [confirmed, setConfirmed] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [moves, setMoves] = useState<ReplayMove[]>([]);
   const [meta, setMeta] = useState<{ username: string; durationMs: number | null } | null>(null);
@@ -1045,6 +1047,28 @@ function Replay(props: {
   const [dragPct, setDragPct] = useState<number | null>(null);
   const timer = useRef<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+
+  // Check if user already viewed this puzzle's replay
+  useEffect(() => {
+    (async () => {
+      setChecking(true);
+      try {
+        const r = await api<{ alreadyViewed: boolean }>(
+          `/api/replay/${encodeURIComponent(props.attemptId)}/check`
+        );
+        if (r.alreadyViewed) {
+          setConfirmed(true);
+        } else {
+          setShowConfirmModal(true);
+        }
+      } catch {
+        // If check fails (e.g. not logged in for public replays), skip the modal
+        setConfirmed(true);
+      } finally {
+        setChecking(false);
+      }
+    })();
+  }, [props.attemptId]);
 
   useEffect(() => {
     if (!confirmed) return;
@@ -1137,7 +1161,7 @@ function Replay(props: {
     setPlaying(false);
   }
 
-  if (!confirmed) {
+  if (checking) {
     return (
       <>
         <div className="back-nav">
@@ -1145,26 +1169,40 @@ function Replay(props: {
             &larr; Back
           </button>
         </div>
-        <div className="card text-center">
-          <h2>Watch Replay</h2>
-          <p className="help-text">
-            If you watch this replay, your times for this puzzle won't count for the leaderboard.
-          </p>
-          <div className="btn-group" style={{ marginTop: 12 }}>
-            <button className="btn primary" onClick={() => setConfirmed(true)}>
-              Watch anyway
-            </button>
-            <button className="btn" onClick={() => nav("/")}>
-              Go back
-            </button>
-          </div>
-        </div>
+        <div className="card"><div className="muted">Loading...</div></div>
       </>
     );
   }
 
   return (
     <>
+      {showConfirmModal && (
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) { setShowConfirmModal(false); nav("/"); } }}
+        >
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Watch replay">
+            <div className="modal-head">
+              <div className="modal-title">Watch replay?</div>
+              <button className="modal-close" onClick={() => { setShowConfirmModal(false); nav("/"); }} aria-label="Close">&times;</button>
+            </div>
+            <div className="modal-body">
+              <p className="help-text">
+                If you watch this replay, your times for this puzzle won't count for the leaderboard.
+              </p>
+              <div className="btn-group" style={{ marginTop: 12 }}>
+                <button className="btn primary" onClick={() => { setShowConfirmModal(false); setConfirmed(true); }}>
+                  Watch anyway
+                </button>
+                <button className="btn" onClick={() => { setShowConfirmModal(false); nav("/"); }}>
+                  Go back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="back-nav">
         <button className="btn" onClick={() => nav("/")}>
           &larr; Back
