@@ -552,7 +552,8 @@ function AuthCard(props: {
       el.innerHTML = "";
       widgetId = t.render(el, {
         sitekey: siteKey,
-        theme: "auto" as any,
+        theme: "auto",
+        appearance: "interaction-only",
         callback: (token) => {
           setCaptchaToken(token);
           setCaptchaReady(true);
@@ -631,21 +632,13 @@ function AuthCard(props: {
           </div>
         )}
         {props.mode === "register" && (
-          <div className="field">
-            <label>Captcha</label>
-            {(import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
-              <>
-                <div id="turnstile" className="turnstile-wrap" />
-                <div className="hint">
-                  {captchaReady ? "Verified" : "Pending..."}
-                </div>
-              </>
-            ) : (
-              <div className="hint">
-                Captcha disabled in dev
-              </div>
-            )}
-          </div>
+          (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
+            <div id="turnstile" className="turnstile-wrap" />
+          ) : (
+            <div className="hint" style={{ marginBottom: 8 }}>
+              Captcha disabled in dev
+            </div>
+          )
         )}
         {props.mode === "login" && (
           <label className="row muted remember-field">

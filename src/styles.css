@@ -692,7 +692,7 @@ a {
 }
 
 .turnstile-wrap {
-  min-height: 70px;
+  min-height: 0;
 }
 
 .remember-field {
