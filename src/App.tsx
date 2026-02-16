@@ -785,14 +785,19 @@ function PublicLeaderboard() {
   );
 }
 
+type Period = "day" | "week" | "month" | "all";
+const PERIOD_LABELS: Record<Period, string> = { day: "Daily", week: "Weekly", month: "Monthly", all: "All time" };
+
 function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
   const [leader5, setLeader5] = useState<LeaderboardEntry[]>([]);
   const [leader10, setLeader10] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>("all");
 
   useEffect(() => {
     if (!props.online) return;
-    const es = new EventSource("/api/leaderboard/stream");
+    setLoading(true);
+    const es = new EventSource(`/api/leaderboard/stream?period=${period}`);
     es.onmessage = (e) => {
       const data = JSON.parse(e.data) as { leaderboard5: LeaderboardEntry[]; leaderboard10: LeaderboardEntry[] };
       setLeader5(data.leaderboard5);
@@ -800,11 +805,10 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
       setLoading(false);
     };
     es.onerror = () => {
-      // EventSource auto-reconnects; just mark loaded so UI isn't stuck
       setLoading(false);
     };
     return () => es.close();
-  }, [props.online]);
+  }, [props.online, period]);
 
   async function newGame(puzzleId?: string, size?: number) {
     props.onToast(null);
@@ -852,6 +856,18 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
       </div>
 
       {props.online && (
+        <>
+        <div className="btn-group period-toggle">
+          {(["day", "week", "month", "all"] as const).map((p) => (
+            <button
+              key={p}
+              className={`btn sm${period === p ? " primary" : ""}`}
+              onClick={() => setPeriod(p)}
+            >
+              {PERIOD_LABELS[p]}
+            </button>
+          ))}
+        </div>
         <div className="leaderboard-cols">
           {([["5x5", leader5], ["10x10", leader10]] as const).map(([label, entries]) => (
             <div key={label} className="card">
@@ -895,6 +911,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             </div>
           ))}
         </div>
+        </>
       )}
     </>
   );

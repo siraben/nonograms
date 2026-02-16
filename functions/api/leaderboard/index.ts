@@ -2,6 +2,15 @@ import type { Env } from "../../lib/auth";
 import { requireUser } from "../../lib/auth";
 import { json } from "../../lib/http";
 
+function periodCutoff(period: string | null): string | null {
+  switch (period) {
+    case "day": return new Date(Date.now() - 86_400_000).toISOString();
+    case "week": return new Date(Date.now() - 7 * 86_400_000).toISOString();
+    case "month": return new Date(Date.now() - 30 * 86_400_000).toISOString();
+    default: return null;
+  }
+}
+
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const authed = await requireUser(env, request);
   if (authed instanceof Response) return authed;
@@ -10,6 +19,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const sizeRaw = url.searchParams.get("size");
   const size = sizeRaw ? Number(sizeRaw) : null;
   const filterSize = size === 5 || size === 10 ? size : null;
+  const cutoff = periodCutoff(url.searchParams.get("period"));
 
   const rows = await env.DB.prepare(
     `SELECT a.id as attemptId,
@@ -24,9 +34,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
      JOIN puzzles p ON p.id = a.puzzle_id
      WHERE a.completed = 1 AND a.eligible = 1 AND a.duration_ms IS NOT NULL
        AND (?1 IS NULL OR (p.width = ?1 AND p.height = ?1))
+       AND (?2 IS NULL OR a.finished_at >= ?2)
      ORDER BY a.duration_ms ASC
      LIMIT 50`
-  ).bind(filterSize).all<{ attemptId: string; puzzleId: string; durationMs: number; finishedAt: string; username: string; width: number; height: number }>();
+  ).bind(filterSize, cutoff).all<{ attemptId: string; puzzleId: string; durationMs: number; finishedAt: string; username: string; width: number; height: number }>();
 
   return json({ leaderboard: rows.results });
 };

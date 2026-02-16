@@ -11,7 +11,17 @@ type Row = {
   height: number;
 };
 
-async function fetchBoth(db: D1Database) {
+function periodCutoff(period: string | null): string | null {
+  switch (period) {
+    case "day": return new Date(Date.now() - 86_400_000).toISOString();
+    case "week": return new Date(Date.now() - 7 * 86_400_000).toISOString();
+    case "month": return new Date(Date.now() - 30 * 86_400_000).toISOString();
+    default: return null;
+  }
+}
+
+async function fetchBoth(db: D1Database, period: string | null) {
+  const cutoff = periodCutoff(period);
   const q = (size: number) =>
     db.prepare(
       `SELECT a.id as attemptId,
@@ -26,9 +36,10 @@ async function fetchBoth(db: D1Database) {
        JOIN puzzles p ON p.id = a.puzzle_id
        WHERE a.completed = 1 AND a.eligible = 1 AND a.duration_ms IS NOT NULL
          AND p.width = ?1 AND p.height = ?1
+         AND (?2 IS NULL OR a.finished_at >= ?2)
        ORDER BY a.duration_ms ASC
        LIMIT 50`
-    ).bind(size).all<Row>();
+    ).bind(size, cutoff).all<Row>();
 
   const [r5, r10] = await Promise.all([q(5), q(10)]);
   return { leaderboard5: r5.results, leaderboard10: r10.results };
@@ -42,6 +53,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  const url = new URL(request.url);
+  const period = url.searchParams.get("period");
 
   const encoder = new TextEncoder();
   let closed = false;
@@ -60,7 +74,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
       // Send initial data and record it for dedup
       let lastJson: string;
       try {
-        const initial = await fetchBoth(env.DB);
+        const initial = await fetchBoth(env.DB, period);
         lastJson = JSON.stringify(initial);
         send(initial);
       } catch {
@@ -82,7 +96,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
           return;
         }
         try {
-          const data = await fetchBoth(env.DB);
+          const data = await fetchBoth(env.DB, period);
           const json = JSON.stringify(data);
           if (json !== lastJson) {
             lastJson = json;

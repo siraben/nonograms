@@ -231,6 +231,11 @@ a {
   gap: 6px;
 }
 
+.period-toggle {
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
 .leaderboard-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
