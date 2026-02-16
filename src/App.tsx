@@ -788,7 +788,15 @@ function Play(props: {
     }
   }
 
-  // Abandon attempt on page unload (close tab, navigate away)
+  // Redirect away from abandoned attempts (completed with no finishedAt)
+  useEffect(() => {
+    if (attempt?.completed && !attempt.finishedAt) {
+      props.onToast({ kind: "bad", msg: "Attempt abandoned — start a new game" });
+      nav("/");
+    }
+  }, [attempt?.completed, attempt?.finishedAt]);
+
+  // Abandon attempt on page unload (close tab, refresh, navigate away)
   useEffect(() => {
     if (!attempt?.startedAt || attempt.completed) return;
     const url = `/api/attempts/${encodeURIComponent(props.attemptId)}/abandon`;
