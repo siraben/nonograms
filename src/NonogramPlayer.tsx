@@ -72,11 +72,13 @@ export default function NonogramPlayer(props: {
   const paintValue = useRef<CellState>(0);
   const lastTouchIdx = useRef(-1);
   const finishing = useRef(false);
+  const autoFinishRetries = useRef(0);
 
   useEffect(() => {
     setState(props.initialState);
     setSolved(false);
     finishing.current = false;
+    autoFinishRetries.current = 0;
     moveBuffer.current = [];
     if (flushTimer.current) { clearTimeout(flushTimer.current); flushTimer.current = null; }
   }, [props.attemptId, props.initialState]);
@@ -102,6 +104,18 @@ export default function NonogramPlayer(props: {
     };
     document.addEventListener("mouseup", handleUp);
     return () => document.removeEventListener("mouseup", handleUp);
+  }, []);
+
+  // Flush buffered moves when tab becomes visible again (mobile browsers
+  // throttle/kill timers in background tabs, so the 150ms flush may never fire).
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && moveBuffer.current.length > 0) {
+        flushMoves();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   const progress = useMemo(() =>
@@ -204,8 +218,10 @@ export default function NonogramPlayer(props: {
 
   async function finishAttempt(auto: boolean) {
     if (props.readonly || solved || finishing.current) return;
+    if (auto && autoFinishRetries.current >= 5) return;
     finishing.current = true;
-    if (!auto) props.onToast(null);
+    if (auto) autoFinishRetries.current++;
+    if (!auto) { props.onToast(null); autoFinishRetries.current = 0; }
 
     if (props.offline) {
       if (progress.allCorrect) {
@@ -221,9 +237,16 @@ export default function NonogramPlayer(props: {
       return;
     }
 
-    // Flush any buffered moves, then wait for all in-flight requests.
-    flushMoves();
-    await Promise.all(pendingFlushes.current);
+    // Drain the move buffer completely: flush and wait in a loop until
+    // no buffered moves remain (failed flushes re-queue with a 2s retry,
+    // so a single flush+await may leave moves still in the buffer).
+    for (let tries = 0; tries < 10 && (moveBuffer.current.length > 0 || pendingFlushes.current.length > 0); tries++) {
+      flushMoves();
+      await Promise.all(pendingFlushes.current);
+      if (moveBuffer.current.length > 0) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
     try {
       const r = await api<{
         solved: boolean;
@@ -243,14 +266,25 @@ export default function NonogramPlayer(props: {
         const el = r.eligible === false ? " (replay viewed \u2014 not on leaderboard)" : "";
         props.onToast({ kind: "ok", msg: `Solved${t}${el}` });
         props.onSolved?.();
-      } else if (!auto) {
+      } else if (auto) {
+        // Server state may lag behind client — retry once after a delay.
+        finishing.current = false;
+        window.setTimeout(() => void finishAttempt(true), 2000);
+        return;
+      } else {
         props.onToast({
           kind: "bad",
           msg: `Not solved. Wrong rows: ${r.wrongRows || 0}, Wrong cols: ${r.wrongCols || 0}`,
         });
       }
     } catch (err) {
-      if (!auto) props.onToast({ kind: "bad", msg: (err as Error).message });
+      if (auto) {
+        // Network error during auto-finish — retry after a delay.
+        finishing.current = false;
+        window.setTimeout(() => void finishAttempt(true), 2000);
+        return;
+      }
+      props.onToast({ kind: "bad", msg: (err as Error).message });
     } finally {
       finishing.current = false;
     }
