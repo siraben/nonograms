@@ -4,13 +4,17 @@ import { api } from "./api";
 import * as Auth from "./auth";
 import NonogramPlayer from "./NonogramPlayer";
 import { getTurnstile } from "./turnstile";
+import { useOnline } from "./useOnline";
+import { genPuzzle } from "../functions/lib/puzzle";
+import { randomU32 } from "../functions/lib/rng";
 
 type Route =
   | { name: "login" }
   | { name: "register" }
   | { name: "home" }
   | { name: "play"; attemptId: string }
-  | { name: "replay"; attemptId: string };
+  | { name: "replay"; attemptId: string }
+  | { name: "offline-play"; size: number };
 
 function fmtUtc(iso: string): string {
   const d = new Date(iso);
@@ -25,6 +29,10 @@ function parseRoute(): Route {
   if (parts[0] === "register") return { name: "register" };
   if (parts[0] === "a" && parts[1]) return { name: "play", attemptId: parts[1] };
   if (parts[0] === "replay" && parts[1]) return { name: "replay", attemptId: parts[1] };
+  if (parts[0] === "offline" && parts[1]) {
+    const size = parseInt(parts[1], 10);
+    if (size === 5 || size === 10) return { name: "offline-play", size };
+  }
   return { name: "home" };
 }
 
@@ -250,6 +258,7 @@ export default function App() {
   const [busy, setBusy] = useState(true);
   const [toast, setToast] = useState<{ kind: "ok" | "bad"; msg: string } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const online = useOnline();
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("nonogram-theme");
     if (saved === "dark" || saved === "light") return saved;
@@ -288,7 +297,7 @@ export default function App() {
 
   const authedRoute = useMemo(() => {
     if (busy) return route;
-    if (!user && route.name !== "login" && route.name !== "register") return { name: "login" } as Route;
+    if (!user && route.name !== "login" && route.name !== "register" && route.name !== "offline-play") return { name: "login" } as Route;
     if (user && (route.name === "login" || route.name === "register")) return { name: "home" } as Route;
     return route;
   }, [busy, route, user]);
@@ -323,6 +332,7 @@ export default function App() {
           >
             <HelpIcon />
           </button>
+          {!online && <div className="pill pill-muted">offline</div>}
           {user && (
             <>
               <div className="pill">{user.username}</div>
@@ -441,7 +451,11 @@ export default function App() {
         />
       )}
 
-      {authedRoute.name === "home" && <Home onToast={setToast} />}
+      {authedRoute.name === "home" && <Home online={online} onToast={setToast} />}
+
+      {authedRoute.name === "offline-play" && (
+        <OfflinePlay size={authedRoute.size} onToast={setToast} />
+      )}
 
       {authedRoute.name === "play" && (
         <Play attemptId={authedRoute.attemptId} onToast={setToast} />
@@ -618,7 +632,7 @@ function AuthCard(props: {
   );
 }
 
-function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
+function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
   const [leader, setLeader] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [lbSize, setLbSize] = useState<5 | 10>(10);
@@ -634,8 +648,8 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
   }
 
   useEffect(() => {
-    void refreshLeader();
-  }, [lbSize]);
+    if (props.online) void refreshLeader();
+  }, [lbSize, props.online]);
 
   async function newGame(puzzleId?: string, size?: number) {
     props.onToast(null);
@@ -656,86 +670,143 @@ function Home(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) 
   return (
     <>
       <div className="card text-center">
+        {!props.online && (
+          <div className="hint" style={{ marginBottom: 8 }}>
+            <strong>Offline mode</strong> — puzzles generated locally, no leaderboard.
+          </div>
+        )}
         <div className="btn-group">
           <button
             className="btn primary lg"
-            onClick={() => void newGame(undefined, 5)}
+            onClick={() => props.online ? void newGame(undefined, 5) : nav("/offline/5")}
           >
             New 5x5
           </button>
           <button
             className="btn primary lg"
-            onClick={() => void newGame(undefined, 10)}
+            onClick={() => props.online ? void newGame(undefined, 10) : nav("/offline/10")}
           >
             New 10x10
           </button>
         </div>
-        <div className="hint" style={{ marginTop: 8 }}>
-          Viewing a replay disqualifies you from that puzzle's leaderboard.
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-header-row">
-          <h2>Leaderboard</h2>
-          <div className="row">
-            <button
-              className={`btn sm${lbSize === 5 ? " selected" : ""}`}
-              onClick={() => setLbSize(5)}
-            >
-              5x5
-            </button>
-            <button
-              className={`btn sm${lbSize === 10 ? " selected" : ""}`}
-              onClick={() => setLbSize(10)}
-            >
-              10x10
-            </button>
-            <button
-              className="btn sm"
-              onClick={() => void refreshLeader()}
-            >
-              refresh
-            </button>
-          </div>
-        </div>
-        {loading ? (
-          <div className="muted">Loading...</div>
-        ) : leader.length === 0 ? (
-          <div className="muted">No runs yet. Be the first!</div>
-        ) : (
-          <div className="list">
-            {leader.map((e, i) => (
-              <div key={e.attemptId} className="item">
-                <div className="title">
-                  <span className="muted" style={{ marginRight: 6 }}>#{i + 1}</span>
-                  {e.username}
-                  <span className="muted" style={{ marginLeft: 8 }}>
-                    {(e.durationMs / 1000).toFixed(2)}s
-                  </span>
-                </div>
-                <div className="meta">
-                  {e.width}x{e.height} {e.puzzleId.slice(0, 8)} &mdash;{" "}
-                  {fmtUtc(e.finishedAt)}
-                </div>
-                <div className="row item-actions">
-                  <button
-                    className="btn sm"
-                    onClick={() => void newGame(e.puzzleId)}
-                  >
-                    play
-                  </button>
-                  <button
-                    className="btn sm"
-                    onClick={() => nav(`/replay/${e.attemptId}`)}
-                  >
-                    replay
-                  </button>
-                </div>
-              </div>
-            ))}
+        {props.online && (
+          <div className="hint" style={{ marginTop: 8 }}>
+            Viewing a replay disqualifies you from that puzzle's leaderboard.
           </div>
         )}
+      </div>
+
+      {props.online && (
+        <div className="card">
+          <div className="card-header-row">
+            <h2>Leaderboard</h2>
+            <div className="row">
+              <button
+                className={`btn sm${lbSize === 5 ? " selected" : ""}`}
+                onClick={() => setLbSize(5)}
+              >
+                5x5
+              </button>
+              <button
+                className={`btn sm${lbSize === 10 ? " selected" : ""}`}
+                onClick={() => setLbSize(10)}
+              >
+                10x10
+              </button>
+              <button
+                className="btn sm"
+                onClick={() => void refreshLeader()}
+              >
+                refresh
+              </button>
+            </div>
+          </div>
+          {loading ? (
+            <div className="muted">Loading...</div>
+          ) : leader.length === 0 ? (
+            <div className="muted">No runs yet. Be the first!</div>
+          ) : (
+            <div className="list">
+              {leader.map((e, i) => (
+                <div key={e.attemptId} className="item">
+                  <div className="title">
+                    <span className="muted" style={{ marginRight: 6 }}>#{i + 1}</span>
+                    {e.username}
+                    <span className="muted" style={{ marginLeft: 8 }}>
+                      {(e.durationMs / 1000).toFixed(2)}s
+                    </span>
+                  </div>
+                  <div className="meta">
+                    {e.width}x{e.height} {e.puzzleId.slice(0, 8)} &mdash;{" "}
+                    {fmtUtc(e.finishedAt)}
+                  </div>
+                  <div className="row item-actions">
+                    <button
+                      className="btn sm"
+                      onClick={() => void newGame(e.puzzleId)}
+                    >
+                      play
+                    </button>
+                    <button
+                      className="btn sm"
+                      onClick={() => nav(`/replay/${e.attemptId}`)}
+                    >
+                      replay
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function OfflinePlay(props: {
+  size: number;
+  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+}) {
+  const [key, setKey] = useState(0);
+  const puzzle = useMemo(() => {
+    const seed = randomU32();
+    const p = genPuzzle(props.size, props.size, seed);
+    return { width: p.width, height: p.height, rowClues: p.rowClues, colClues: p.colClues };
+  }, [props.size, key]);
+
+  const initialState = useMemo(
+    () => Array.from({ length: puzzle.width * puzzle.height }, () => 0 as CellState),
+    [puzzle],
+  );
+
+  const startedAt = useMemo(() => new Date().toISOString(), [puzzle]);
+
+  return (
+    <>
+      <div className="back-nav">
+        <button className="btn" onClick={() => nav("/")}>
+          &larr; Back
+        </button>
+      </div>
+      <div className="card">
+        <NonogramPlayer
+          attemptId={`offline-${key}`}
+          eligible={false}
+          puzzle={puzzle}
+          initialState={initialState}
+          startedAt={startedAt}
+          offline
+          onToast={props.onToast}
+        />
+        <div className="check-area" style={{ marginTop: 8 }}>
+          <button
+            className="btn"
+            onClick={() => { props.onToast(null); setKey((k) => k + 1); }}
+          >
+            New puzzle
+          </button>
+        </div>
       </div>
     </>
   );

@@ -615,3 +615,9 @@ a {
   font-size: 18px;
   padding: 14px 36px;
 }
+
+.pill-muted {
+  background: var(--danger-light);
+  color: var(--danger);
+  font-size: 11px;
+}

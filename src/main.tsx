@@ -9,3 +9,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   </React.StrictMode>
 );
 
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+

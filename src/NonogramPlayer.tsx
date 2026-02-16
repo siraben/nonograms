@@ -47,6 +47,7 @@ export default function NonogramPlayer(props: {
   initialState: CellState[];
   startedAt?: string | null;
   readonly?: boolean;
+  offline?: boolean;
   onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
 }) {
   const { puzzle } = props;
@@ -147,7 +148,7 @@ export default function NonogramPlayer(props: {
   }
 
   function postMove(idx: number, st: CellState) {
-    if (props.readonly) return;
+    if (props.readonly || props.offline) return;
     inFlight.current++;
     setSaving(true);
     const p = api(
@@ -174,6 +175,20 @@ export default function NonogramPlayer(props: {
     if (props.readonly || solved || finishing.current) return;
     finishing.current = true;
     if (!auto) props.onToast(null);
+
+    if (props.offline) {
+      if (cluesMatch(stateRef.current, puzzle.width, puzzle.height, puzzle.rowClues, puzzle.colClues)) {
+        stopTimer();
+        setSolved(true);
+        const secs = (elapsed / 1000).toFixed(2);
+        props.onToast({ kind: "ok", msg: `Solved in ${secs}s (offline)` });
+      } else if (!auto) {
+        props.onToast({ kind: "bad", msg: "Not solved yet" });
+      }
+      finishing.current = false;
+      return;
+    }
+
     // Wait for all in-flight moves to reach the server before validating.
     await Promise.all(pendingMoves.current);
     try {

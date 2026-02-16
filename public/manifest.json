@@ -1,0 +1,17 @@
+{
+  "name": "Nonogram",
+  "short_name": "Nonogram",
+  "description": "Friends-only nonogram puzzle room",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#5b8def",
+  "background_color": "#f0f2f5",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
