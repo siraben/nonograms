@@ -400,7 +400,7 @@ export default function NonogramPlayer(props: {
       }
     }
 
-    return { gridTemplateColumns: `repeat(${cols}, auto)`, cells: items };
+    return { gridTemplateColumns: `repeat(${cols}, minmax(0, var(--cell-size, 28px)))`, cells: items };
   }, [puzzle, state]);
 
   return (
@@ -423,7 +423,7 @@ export default function NonogramPlayer(props: {
 
       <div className="nonogram-wrap">
         <div
-          className="nonogram"
+          className={`nonogram${!props.readonly ? " interactive" : ""}`}
           style={{ gridTemplateColumns }}
           onMouseLeave={() => {
             setHoverRow(-1);

@@ -314,16 +314,18 @@ a {
   display: grid;
   gap: 0;
   user-select: none;
-  touch-action: none;
-  width: fit-content;
+  max-width: max-content;
   margin: 0 auto;
+}
+
+.nonogram.interactive {
+  touch-action: none;
 }
 
 .cell,
 .clue,
 .clue-empty {
-  width: var(--cell-size, 28px);
-  height: var(--cell-size, 28px);
+  aspect-ratio: 1;
   display: grid;
   place-items: center;
   font-size: 12px;
