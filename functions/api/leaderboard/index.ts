@@ -1,6 +1,6 @@
-import type { Env } from "../lib/auth";
-import { requireUser } from "../lib/auth";
-import { json } from "../lib/http";
+import type { Env } from "../../lib/auth";
+import { requireUser } from "../../lib/auth";
+import { json } from "../../lib/http";
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const authed = await requireUser(env, request);

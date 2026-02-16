@@ -658,22 +658,20 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
   const [leader10, setLeader10] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function refreshLeader() {
-    setLoading(true);
-    try {
-      const [r5, r10] = await Promise.all([
-        api<{ leaderboard: LeaderboardEntry[] }>("/api/leaderboard?size=5"),
-        api<{ leaderboard: LeaderboardEntry[] }>("/api/leaderboard?size=10"),
-      ]);
-      setLeader5(r5.leaderboard);
-      setLeader10(r10.leaderboard);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    if (props.online) void refreshLeader();
+    if (!props.online) return;
+    const es = new EventSource("/api/leaderboard/stream");
+    es.onmessage = (e) => {
+      const data = JSON.parse(e.data) as { leaderboard5: LeaderboardEntry[]; leaderboard10: LeaderboardEntry[] };
+      setLeader5(data.leaderboard5);
+      setLeader10(data.leaderboard10);
+      setLoading(false);
+    };
+    es.onerror = () => {
+      // EventSource auto-reconnects; just mark loaded so UI isn't stuck
+      setLoading(false);
+    };
+    return () => es.close();
   }, [props.online]);
 
   async function newGame(puzzleId?: string, size?: number) {
@@ -725,15 +723,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
         <div className="leaderboard-cols">
           {([["5x5", leader5], ["10x10", leader10]] as const).map(([label, entries]) => (
             <div key={label} className="card">
-              <div className="card-header-row">
-                <h2>{label} Leaderboard</h2>
-                <button
-                  className="btn sm"
-                  onClick={() => void refreshLeader()}
-                >
-                  refresh
-                </button>
-              </div>
+              <h2>{label} Leaderboard</h2>
               {loading ? (
                 <div className="muted">Loading...</div>
               ) : entries.length === 0 ? (
