@@ -1099,19 +1099,47 @@ function Replay(props: {
           <>
             <div
               className="scrubber"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                const totalMs = moves[moves.length - 1].atMs || 1;
-                const targetMs = pct * totalMs;
-                // Find closest move by time
-                let idx = 0;
-                for (let j = 0; j < moves.length; j++) {
-                  if (moves[j].atMs <= targetMs) idx = j + 1;
-                  else break;
-                }
+              onMouseDown={(e) => {
+                const track = e.currentTarget;
                 if (playing) pause();
-                applyTo(idx);
+                const scrub = (clientX: number) => {
+                  const rect = track.getBoundingClientRect();
+                  const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+                  const totalMs = moves[moves.length - 1].atMs || 1;
+                  const targetMs = pct * totalMs;
+                  let idx = 0;
+                  for (let j = 0; j < moves.length; j++) {
+                    if (moves[j].atMs <= targetMs) idx = j + 1;
+                    else break;
+                  }
+                  applyTo(idx);
+                };
+                scrub(e.clientX);
+                const onMove = (ev: MouseEvent) => scrub(ev.clientX);
+                const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+                document.addEventListener("mousemove", onMove);
+                document.addEventListener("mouseup", onUp);
+              }}
+              onTouchStart={(e) => {
+                const track = e.currentTarget;
+                if (playing) pause();
+                const scrub = (clientX: number) => {
+                  const rect = track.getBoundingClientRect();
+                  const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+                  const totalMs = moves[moves.length - 1].atMs || 1;
+                  const targetMs = pct * totalMs;
+                  let idx = 0;
+                  for (let j = 0; j < moves.length; j++) {
+                    if (moves[j].atMs <= targetMs) idx = j + 1;
+                    else break;
+                  }
+                  applyTo(idx);
+                };
+                scrub(e.touches[0].clientX);
+                const onMove = (ev: TouchEvent) => { ev.preventDefault(); scrub(ev.touches[0].clientX); };
+                const onEnd = () => { document.removeEventListener("touchmove", onMove); document.removeEventListener("touchend", onEnd); };
+                document.addEventListener("touchmove", onMove, { passive: false });
+                document.addEventListener("touchend", onEnd);
               }}
             >
               <div className="scrubber-track">
