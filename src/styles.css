@@ -764,6 +764,16 @@ a {
   transition: border-color 0.15s;
 }
 
+.admin-input-sm {
+  max-width: 100px;
+}
+
 .admin-input:focus {
   border-color: var(--accent);
+}
+
+.invite-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

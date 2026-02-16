@@ -1343,7 +1343,10 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
   const [invites, setInvites] = useState<InviteCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [newCode, setNewCode] = useState("");
+  const [maxUses, setMaxUses] = useState("");
+  const [expiresInDays, setExpiresInDays] = useState("");
   const [creating, setCreating] = useState(false);
+  const [lastCreatedCode, setLastCreatedCode] = useState<string | null>(null);
 
   async function loadData() {
     setLoading(true);
@@ -1367,15 +1370,20 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
     e.preventDefault();
     props.onToast(null);
     setCreating(true);
+    setLastCreatedCode(null);
     try {
       const body: Record<string, unknown> = {};
       if (newCode.trim()) body.code = newCode.trim();
+      if (maxUses.trim()) body.maxUses = parseInt(maxUses.trim(), 10);
+      if (expiresInDays.trim()) body.expiresInDays = parseInt(expiresInDays.trim(), 10);
       const r = await api<{ invite: { id: string; code: string } }>("/api/admin/invites", {
         method: "POST",
         json: body,
       });
-      props.onToast({ kind: "ok", msg: `Created invite: ${r.invite.code}` });
+      setLastCreatedCode(r.invite.code);
       setNewCode("");
+      setMaxUses("");
+      setExpiresInDays("");
       void loadData();
     } catch (err) {
       props.onToast({ kind: "bad", msg: (err as Error).message });
@@ -1491,32 +1499,53 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
             className="admin-input"
             value={newCode}
             onChange={(e) => setNewCode(e.target.value)}
-            placeholder="Custom code (leave blank for random)"
+            placeholder="Code (blank = random)"
+          />
+          <input
+            className="admin-input admin-input-sm"
+            value={maxUses}
+            onChange={(e) => setMaxUses(e.target.value)}
+            placeholder="Max uses"
+            type="number"
+            min="1"
+          />
+          <input
+            className="admin-input admin-input-sm"
+            value={expiresInDays}
+            onChange={(e) => setExpiresInDays(e.target.value)}
+            placeholder="Expires (days)"
+            type="number"
+            min="1"
           />
           <button className="btn primary sm" disabled={creating}>
-            {creating ? "Creating..." : "Create"}
+            {creating ? "..." : "Create"}
           </button>
         </form>
+        {lastCreatedCode && (
+          <div className="toast ok" style={{ marginTop: 8 }}>
+            Created: <code>{lastCreatedCode}</code>
+          </div>
+        )}
         {invites.length === 0 ? (
           <div className="muted" style={{ marginTop: 8 }}>No invite codes</div>
         ) : (
           <div className="list" style={{ marginTop: 8 }}>
             {invites.map((inv) => (
-              <div key={inv.id} className="item">
-                <div className="title">
-                  {inv.id.slice(0, 8)}
-                  {inv.disabled && <span className="muted" style={{ marginLeft: 8 }}>(disabled)</span>}
-                </div>
-                <div className="meta">
-                  Uses: {inv.uses}{inv.maxUses != null ? `/${inv.maxUses}` : ""} &mdash; {fmtTime(inv.createdAt)}
-                  {inv.expiresAt && <> &mdash; expires {fmtTime(inv.expiresAt)}</>}
+              <div key={inv.id} className="item invite-item">
+                <div style={{ flex: 1 }}>
+                  <span className="title">
+                    {inv.id.slice(0, 8)}
+                    {inv.disabled && <span className="muted" style={{ marginLeft: 6 }}>(disabled)</span>}
+                  </span>
+                  <span className="meta" style={{ marginLeft: 8 }}>
+                    {inv.uses}{inv.maxUses != null ? `/${inv.maxUses}` : ""} uses &mdash; {fmtTime(inv.createdAt)}
+                    {inv.expiresAt && <> &mdash; exp {fmtTime(inv.expiresAt)}</>}
+                  </span>
                 </div>
                 {!inv.disabled && (
-                  <div className="row item-actions">
-                    <button className="btn sm danger" onClick={() => disableInvite(inv.id)}>
-                      disable
-                    </button>
-                  </div>
+                  <button className="btn sm danger" onClick={() => disableInvite(inv.id)}>
+                    disable
+                  </button>
                 )}
               </div>
             ))}
