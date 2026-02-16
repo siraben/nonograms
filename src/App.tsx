@@ -1229,6 +1229,17 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
     }
   }
 
+  async function runCleanup() {
+    props.onToast(null);
+    try {
+      const r = await api<{ abandoned: number; deleted: number }>("/api/admin/cleanup", { method: "POST" });
+      props.onToast({ kind: "ok", msg: `Cleaned up: ${r.abandoned} abandoned, ${r.deleted} deleted` });
+      void loadData();
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    }
+  }
+
   async function disableInvite(id: string) {
     props.onToast(null);
     try {
@@ -1249,7 +1260,12 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
       </div>
 
       <div className="card">
-        <h2>Admin Dashboard</h2>
+        <div className="card-header-row">
+          <h2>Admin Dashboard</h2>
+          <button className="btn sm" onClick={runCleanup}>
+            Cleanup stale
+          </button>
+        </div>
         {loading ? (
           <div className="muted">Loading...</div>
         ) : stats ? (

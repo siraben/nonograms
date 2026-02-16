@@ -20,6 +20,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   }
 
   const now = new Date().toISOString();
+
+  // Abandon user's stale in-progress attempts
+  await env.DB.prepare(
+    "UPDATE attempts SET completed = 1, eligible = 0 WHERE user_id = ? AND completed = 0 AND started_at IS NOT NULL"
+  ).bind(authed.userId).run();
+  // Clean up never-started attempts
+  await env.DB.prepare(
+    "DELETE FROM attempts WHERE user_id = ? AND completed = 0 AND started_at IS NULL"
+  ).bind(authed.userId).run();
+
   let puzzleId = body.puzzleId;
 
   const size = body.size && ALLOWED_SIZES.includes(body.size as any) ? body.size : 10;
