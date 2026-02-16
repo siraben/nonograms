@@ -1114,10 +1114,6 @@ function Replay(props: {
                     />
                   );
                 })}
-                <div
-                  className="scrubber-thumb"
-                  style={{ left: `${moves.length ? (pos / moves.length) * 100 : 0}%` }}
-                />
               </div>
             </div>
             <div className="timeline" ref={timelineRef}>

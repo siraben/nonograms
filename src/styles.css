@@ -428,21 +428,14 @@ a {
 }
 
 .scrubber-dot-active {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1.5);
-}
-
-.scrubber-thumb {
-  position: absolute;
-  top: 50%;
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  opacity: 1;
   background: var(--accent);
   border: 2px solid var(--panel);
   box-shadow: var(--shadow);
   transform: translate(-50%, -50%);
-  transition: left 0.1s;
+  z-index: 1;
 }
 
 .timeline {
