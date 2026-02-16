@@ -800,6 +800,10 @@ a {
   margin-top: 8px;
 }
 
+.gap-below {
+  margin-bottom: 8px;
+}
+
 .login-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -660,7 +660,7 @@ function PrivacyPolicy() {
         </ul>
 
       </div>
-      <div style={{ marginTop: 12 }}>
+      <div className="gap-above">
         <button className="btn" onClick={() => history.back()}>&larr; Back</button>
       </div>
     </div>
@@ -782,7 +782,7 @@ function AuthCard(props: {
           (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) ? (
             <div id="turnstile" className="turnstile-wrap" />
           ) : (
-            <div className="hint" style={{ marginBottom: 8 }}>
+            <div className="hint gap-below">
               Captcha disabled in dev
             </div>
           )
@@ -972,7 +972,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
     <>
       <div className="card text-center">
         {!props.online && (
-          <div className="hint" style={{ marginBottom: 8 }}>
+          <div className="hint gap-below">
             <strong>Offline mode</strong> — puzzles generated locally, no leaderboard.
           </div>
         )}
@@ -1085,6 +1085,7 @@ function OfflinePlay(props: {
         </button>
       </div>
       <div className="card">
+        <h2>Offline</h2>
         <NonogramPlayer
           attemptId={`offline-${key}`}
           eligible={false}
@@ -1094,7 +1095,7 @@ function OfflinePlay(props: {
           offline
           onToast={props.onToast}
         />
-        <div className="check-area" style={{ marginTop: 8 }}>
+        <div className="check-area">
           <button
             className="btn"
             onClick={() => { props.onToast(null); setKey((k) => k + 1); }}
@@ -1204,7 +1205,8 @@ function Play(props: {
         </button>
       </div>
       <div className="card">
-        {loading && <div className="muted">Loading puzzle...</div>}
+        <h2>Play</h2>
+        {loading && <div className="muted">Loading...</div>}
         {notStarted && dims && (
           <div className="start-gate">
             <div className="start-grid" style={{
@@ -1485,6 +1487,7 @@ function Replay(props: {
         </button>
       </div>
       <div className="card">
+        <h2>Replay</h2>
         <div className="row replay-controls">
           <button
             className="btn"
