@@ -15,7 +15,8 @@ type Route =
   | { name: "admin" }
   | { name: "play"; attemptId: string }
   | { name: "replay"; attemptId: string }
-  | { name: "offline-play"; size: number };
+  | { name: "offline-play"; size: number }
+  | { name: "privacy" };
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -31,6 +32,7 @@ function parseRoute(): Route {
   if (parts[0] === "admin") return { name: "admin" };
   if (parts[0] === "a" && parts[1]) return { name: "play", attemptId: parts[1] };
   if (parts[0] === "replay" && parts[1]) return { name: "replay", attemptId: parts[1] };
+  if (parts[0] === "privacy") return { name: "privacy" };
   if (parts[0] === "offline" && parts[1]) {
     const size = parseInt(parts[1], 10);
     if (size === 5 || size === 10) return { name: "offline-play", size };
@@ -343,7 +345,7 @@ export default function App() {
 
   const authedRoute = useMemo(() => {
     if (busy) return route;
-    if (!user && route.name !== "login" && route.name !== "register" && route.name !== "offline-play" && route.name !== "replay") return { name: "login" } as Route;
+    if (!user && route.name !== "login" && route.name !== "register" && route.name !== "offline-play" && route.name !== "replay" && route.name !== "privacy") return { name: "login" } as Route;
     if (user && (route.name === "login" || route.name === "register")) return { name: "home" } as Route;
     if (route.name === "admin" && (!user || !user.isAdmin)) return { name: "home" } as Route;
     return route;
@@ -488,7 +490,7 @@ export default function App() {
 
       {toast && <div className={`toast ${toast.kind}`}>{toast.msg}</div>}
 
-      {busy && route.name !== "login" && route.name !== "register" && route.name !== "offline-play" && route.name !== "replay" && (
+      {busy && route.name !== "login" && route.name !== "register" && route.name !== "offline-play" && route.name !== "replay" && route.name !== "privacy" && (
         <div className="card"><div className="muted">Loading...</div></div>
       )}
 
@@ -535,6 +537,8 @@ export default function App() {
       {authedRoute.name === "replay" && (
         <Replay attemptId={authedRoute.attemptId} onToast={setToast} currentUser={user?.username} />
       )}
+
+      {authedRoute.name === "privacy" && <PrivacyPolicy />}
     </div>
   );
 }
@@ -615,6 +619,42 @@ function ChangePasswordModal(props: {
             </div>
           </form>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function PrivacyPolicy() {
+  return (
+    <div className="card card-narrow">
+      <h2>Privacy Policy</h2>
+      <div className="help-text">
+        <p><strong>What we store</strong></p>
+        <ul>
+          <li>Your username and a salted hash of your password (we never store your password in plain text)</li>
+          <li>Session tokens to keep you logged in</li>
+          <li>Your puzzle attempts, moves, and solve times</li>
+        </ul>
+
+        <p style={{ marginTop: 12 }}><strong>What we don't store</strong></p>
+        <ul>
+          <li>Your IP address is not stored in our database. During registration, it is passed to Cloudflare Turnstile for captcha verification but is not retained by us.</li>
+          <li>No cookies are used for tracking. The only stored credential is a session token in localStorage.</li>
+          <li>No analytics or third-party tracking scripts are loaded.</li>
+        </ul>
+
+        <p style={{ marginTop: 12 }}><strong>Hosting</strong></p>
+        <ul>
+          <li>This site is hosted on Cloudflare Pages. Cloudflare may collect standard web server logs (IP addresses, request timestamps) as part of their infrastructure. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>Cloudflare's privacy policy</a>.</li>
+        </ul>
+
+        <p style={{ marginTop: 12 }}><strong>Data deletion</strong></p>
+        <ul>
+          <li>Contact the site administrator to request deletion of your account and all associated data.</li>
+        </ul>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <button className="btn" onClick={() => history.back()}>&larr; Back</button>
       </div>
     </div>
   );
@@ -782,6 +822,9 @@ function AuthCard(props: {
           <button type="button" className="btn sm" onClick={() => nav("/offline/10")}>
             Offline 10x10
           </button>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <a href="#/privacy" className="hint" style={{ textDecoration: "underline" }}>Privacy policy</a>
         </div>
       </div>
     </div>
