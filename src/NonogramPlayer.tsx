@@ -92,12 +92,16 @@ export default function NonogramPlayer(props: {
     return () => document.removeEventListener("mouseup", handleUp);
   }, []);
 
-  // Auto-finish: check clues after every state change
+  // Auto-finish: check clues after state settles (debounced to avoid
+  // triggering on transient states while the user cycles a cell)
   useEffect(() => {
     if (solved || props.readonly || finishing.current) return;
     if (!state.some((s) => s === 1)) return;
-    if (!cluesMatch(state, puzzle.width, puzzle.height, puzzle.rowClues, puzzle.colClues)) return;
-    void finishAttempt(true);
+    const id = window.setTimeout(() => {
+      if (!cluesMatch(state, puzzle.width, puzzle.height, puzzle.rowClues, puzzle.colClues)) return;
+      void finishAttempt(true);
+    }, 300);
+    return () => window.clearTimeout(id);
   }, [state]);
 
   function stopTimer() {
