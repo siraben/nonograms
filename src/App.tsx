@@ -297,7 +297,7 @@ export default function App() {
 
   const authedRoute = useMemo(() => {
     if (busy) return route;
-    if (!user && route.name !== "login" && route.name !== "register" && route.name !== "offline-play") return { name: "login" } as Route;
+    if (!user && route.name !== "login" && route.name !== "register" && route.name !== "offline-play" && route.name !== "replay") return { name: "login" } as Route;
     if (user && (route.name === "login" || route.name === "register")) return { name: "home" } as Route;
     return route;
   }, [busy, route, user]);

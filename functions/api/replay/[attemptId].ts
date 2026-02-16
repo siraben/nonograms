@@ -1,11 +1,8 @@
 import type { Env } from "../../lib/auth";
-import { requireUser } from "../../lib/auth";
+import { getSession } from "../../lib/auth";
 import { err, json } from "../../lib/http";
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request, params }) => {
-  const authed = await requireUser(env, request);
-  if (authed instanceof Response) return authed;
-
   const attemptId = String(params.attemptId || "");
   const a = await env.DB.prepare(
     `SELECT a.id as attemptId, a.puzzle_id as puzzleId, a.user_id as userId,
@@ -41,10 +38,13 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
     .all<{ seq: number; atMs: number; idx: number; state: number }>();
 
   // Mark that this user has viewed a replay for this puzzle (disqualifies future leaderboard runs for that puzzle).
-  const now = new Date().toISOString();
-  await env.DB.prepare("INSERT OR REPLACE INTO replay_views (user_id, puzzle_id, viewed_at) VALUES (?, ?, ?)")
-    .bind(authed.userId, a.puzzleId, now)
-    .run();
+  const authed = await getSession(env, request);
+  if (authed) {
+    const now = new Date().toISOString();
+    await env.DB.prepare("INSERT OR REPLACE INTO replay_views (user_id, puzzle_id, viewed_at) VALUES (?, ?, ?)")
+      .bind(authed.userId, a.puzzleId, now)
+      .run();
+  }
 
   return json({
     attempt: {
