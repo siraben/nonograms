@@ -49,6 +49,7 @@ export default function NonogramPlayer(props: {
   readonly?: boolean;
   offline?: boolean;
   onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+  onSolved?: () => void;
 }) {
   const { puzzle } = props;
   const [state, setState] = useState<CellState[]>(() => props.initialState);
@@ -182,6 +183,7 @@ export default function NonogramPlayer(props: {
         setSolved(true);
         const secs = (elapsed / 1000).toFixed(2);
         props.onToast({ kind: "ok", msg: `Solved in ${secs}s (offline)` });
+        props.onSolved?.();
       } else if (!auto) {
         props.onToast({ kind: "bad", msg: "Not solved yet" });
       }
@@ -209,6 +211,7 @@ export default function NonogramPlayer(props: {
         const t = typeof r.durationMs === "number" ? ` in ${(r.durationMs / 1000).toFixed(2)}s` : "";
         const el = r.eligible === false ? " (replay viewed \u2014 not on leaderboard)" : "";
         props.onToast({ kind: "ok", msg: `Solved${t}${el}` });
+        props.onSolved?.();
       } else if (!auto) {
         props.onToast({
           kind: "bad",

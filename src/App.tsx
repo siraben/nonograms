@@ -8,6 +8,8 @@ import { useOnline } from "./useOnline";
 import { genPuzzle } from "../functions/lib/puzzle";
 import { randomU32 } from "../functions/lib/rng";
 
+let justFinishedGame: { attemptId: string; size: number } | null = null;
+
 type Route =
   | { name: "login" }
   | { name: "register" }
@@ -1023,6 +1025,10 @@ function Play(props: {
             initialState={attempt.state}
             startedAt={attempt.startedAt}
             onToast={props.onToast}
+            onSolved={() => {
+              justFinishedGame = { attemptId: props.attemptId, size: puzzle.width };
+              nav(`/replay/${props.attemptId}`);
+            }}
           />
         )}
       </div>
@@ -1049,11 +1055,22 @@ function Replay(props: {
     Array.from({ length: 100 }, () => 0 as CellState)
   );
   const [dragPct, setDragPct] = useState<number | null>(null);
+  const [finishedSize, setFinishedSize] = useState<number | null>(null);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const wantAutoPlay = useRef(false);
   const timer = useRef<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   // Check if user already viewed this puzzle's replay
   useEffect(() => {
+    if (justFinishedGame && justFinishedGame.attemptId === props.attemptId) {
+      setFinishedSize(justFinishedGame.size);
+      justFinishedGame = null;
+      wantAutoPlay.current = true;
+      setConfirmed(true);
+      setChecking(false);
+      return;
+    }
     (async () => {
       setChecking(true);
       try {
@@ -1093,6 +1110,10 @@ function Replay(props: {
           Array.from({ length: r.puzzle.width * r.puzzle.height }, () => 0 as CellState)
         );
         setReplayElapsed(0);
+        if (wantAutoPlay.current) {
+          wantAutoPlay.current = false;
+          setShouldAutoPlay(true);
+        }
       } catch (err) {
         props.onToast({ kind: "bad", msg: (err as Error).message });
       }
@@ -1101,6 +1122,14 @@ function Replay(props: {
       if (timer.current) clearTimeout(timer.current);
     };
   }, [props.attemptId, confirmed]);
+
+  // Auto-play replay when arriving from a just-finished game
+  useEffect(() => {
+    if (shouldAutoPlay && moves.length > 0 && puzzle) {
+      setShouldAutoPlay(false);
+      play();
+    }
+  }, [shouldAutoPlay, moves, puzzle]);
 
   // Auto-scroll timeline to current move
   useEffect(() => {
@@ -1163,6 +1192,18 @@ function Replay(props: {
   function pause() {
     if (timer.current) clearTimeout(timer.current);
     setPlaying(false);
+  }
+
+  async function startNewGame() {
+    try {
+      const r = await api<{ attempt: { id: string } }>("/api/attempts/new", {
+        method: "POST",
+        json: { size: finishedSize },
+      });
+      nav(`/a/${r.attempt.id}`);
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    }
   }
 
   if (checking) {
@@ -1357,6 +1398,13 @@ function Replay(props: {
           </>
         )}
       </div>
+      {finishedSize && (
+        <div className="card text-center">
+          <button className="btn primary lg" onClick={startNewGame}>
+            New {finishedSize}&times;{finishedSize}
+          </button>
+        </div>
+      )}
     </>
   );
 }
