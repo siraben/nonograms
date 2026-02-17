@@ -1508,7 +1508,7 @@ function Replay(props: {
     return idx;
   }
 
-  function play() {
+  function play(fromMs?: number) {
     if (!puzzle || !moves.length) return;
     if (raf.current) cancelAnimationFrame(raf.current);
     setPlaying(true);
@@ -1519,9 +1519,8 @@ function Replay(props: {
     const baseScale = Math.min(1, span < 10000 ? 10000 / Math.max(span, 1) :
                       span > 45000 ? 45000 / span : 1);
 
-    // If replay already finished, reset to beginning
-    let simMs = replayElapsed;
-    let lastIdx = pos;
+    let simMs = fromMs ?? replayElapsed;
+    let lastIdx = fromMs != null ? moveIdxAtTime(fromMs) : pos;
     if (simMs >= endMs) {
       applyTo(0);
       simMs = 0;
@@ -1666,7 +1665,7 @@ function Replay(props: {
               <div className="transport-btns">
                 <button
                   className="btn icon-btn"
-                  onClick={() => { applyTo(0); if (playing) play(); }}
+                  onClick={() => { applyTo(0); if (playing) play(0); }}
                   disabled={!moves.length}
                   aria-label="Reset"
                   title="Reset"
