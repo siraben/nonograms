@@ -244,6 +244,43 @@ a {
   margin-bottom: 8px;
 }
 
+.leaderboard-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.leaderboard-wrap::before,
+.leaderboard-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.leaderboard-wrap::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg), transparent);
+}
+
+.leaderboard-wrap::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg), transparent);
+}
+
+.leaderboard-wrap.can-scroll-left::before {
+  opacity: 1;
+}
+
+.leaderboard-wrap.can-scroll-right::after {
+  opacity: 1;
+}
+
 .leaderboard-cols {
   display: flex;
   gap: 12px;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Attempt, CellState, LeaderboardEntry, Puzzle, ReplayMove, User } from "./types";
 import { api } from "./api";
 import * as Auth from "./auth";
@@ -960,6 +960,24 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
   const [page20, setPage20] = useState(0);
   const PAGE_SIZE = 10;
   const leaderColsRef = useRef<HTMLDivElement>(null);
+  const leaderWrapRef = useRef<HTMLDivElement>(null);
+
+  const updateScrollHints = useCallback(() => {
+    const el = leaderColsRef.current;
+    const wrap = leaderWrapRef.current;
+    if (!el || !wrap) return;
+    wrap.classList.toggle("can-scroll-left", el.scrollLeft > 2);
+    wrap.classList.toggle("can-scroll-right", el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = leaderColsRef.current;
+    if (!el) return;
+    updateScrollHints();
+    el.addEventListener("scroll", updateScrollHints, { passive: true });
+    window.addEventListener("resize", updateScrollHints);
+    return () => { el.removeEventListener("scroll", updateScrollHints); window.removeEventListener("resize", updateScrollHints); };
+  }, [updateScrollHints]);
 
   useEffect(() => {
     if (!props.online) return;
@@ -972,6 +990,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
       setLeader15(data.leaderboard15);
       setLeader20(data.leaderboard20);
       setLoading(false);
+      requestAnimationFrame(updateScrollHints);
     };
     es.onerror = () => {
       setLoading(false);
@@ -1066,6 +1085,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         </div>
+        <div className="leaderboard-wrap" ref={leaderWrapRef}>
         <div className="leaderboard-cols" ref={leaderColsRef}>
           {([["5x5", leader5, page5, setPage5], ["10x10", leader10, page10, setPage10], ["15x15", leader15, page15, setPage15], ["20x20", leader20, page20, setPage20]] as [string, LeaderboardEntry[], number, (n: number) => void][]).map(([label, entries, page, setPage]) => {
             const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
@@ -1129,6 +1149,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             </div>
             );
           })}
+        </div>
         </div>
         </>
       )}
