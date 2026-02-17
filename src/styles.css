@@ -510,6 +510,18 @@ a {
   border-radius: 3px;
 }
 
+.mini-kde {
+  display: block;
+  width: 100%;
+  height: 20px;
+  margin: 4px 0;
+}
+
+.mini-kde path {
+  fill: var(--accent);
+  opacity: 0.2;
+}
+
 .scrubber-kde {
   position: absolute;
   bottom: 100%;

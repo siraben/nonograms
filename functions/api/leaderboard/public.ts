@@ -44,6 +44,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
       finishedAt: r.finishedAt,
       width: r.width,
       height: r.height,
+      kdePath: r.kdePath,
     }));
 
   return json({

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Attempt, CellState, LeaderboardEntry, Puzzle, ReplayMove, User } from "./types";
 import { api } from "./api";
+import { computeKdePath } from "../lib/kde";
 import * as Auth from "./auth";
 import NonogramPlayer from "./NonogramPlayer";
 import { getTurnstile } from "./turnstile";
@@ -848,7 +849,7 @@ function AuthCard(props: {
   );
 }
 
-type PublicEntry = { username: string; durationMs: number; finishedAt: string; width: number; height: number };
+type PublicEntry = { username: string; durationMs: number; finishedAt: string; width: number; height: number; kdePath?: string };
 
 function PublicLeaderboard() {
   const [entries5, setEntries5] = useState<PublicEntry[]>([]);
@@ -903,6 +904,9 @@ function PublicLeaderboard() {
                     {(e.durationMs / 1000).toFixed(2)}s
                   </span>
                 </div>
+                {e.kdePath && (
+                  <svg className="mini-kde" viewBox="0 0 100 28" preserveAspectRatio="none"><path d={e.kdePath} /></svg>
+                )}
                 <div className="meta">{fmtTime(e.finishedAt)}</div>
                 <div className="row item-actions">
                   <button className="btn sm" onClick={() => setSignupPrompt(true)}>play</button>
@@ -1124,6 +1128,9 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
                           {(e.durationMs / 1000).toFixed(2)}s
                         </span>
                       </div>
+                      {e.kdePath && (
+                        <svg className="mini-kde" viewBox="0 0 100 28" preserveAspectRatio="none"><path d={e.kdePath} /></svg>
+                      )}
                       <div className="meta">
                         {e.puzzleId.slice(0, 8)} &mdash; {fmtTime(e.finishedAt)}
                       </div>
@@ -1346,28 +1353,7 @@ function ScrubberKDE(props: { moves: ReplayMove[] }) {
     const { moves } = props;
     if (moves.length < 2) return "";
     const totalMs = moves[moves.length - 1].atMs || 1;
-    const BINS = 80;
-    const bandwidth = Math.max(totalMs / 20, 1);
-    const density = new Float64Array(BINS);
-    for (const m of moves) {
-      const center = (m.atMs / totalMs) * BINS;
-      for (let b = 0; b < BINS; b++) {
-        const dist = (b + 0.5 - center) * (totalMs / BINS);
-        density[b] += Math.exp(-0.5 * (dist / bandwidth) ** 2);
-      }
-    }
-    let maxD = 0;
-    for (let b = 0; b < BINS; b++) if (density[b] > maxD) maxD = density[b];
-    if (maxD === 0) return "";
-    const H = 28;
-    let d = `M0,${H}`;
-    for (let b = 0; b < BINS; b++) {
-      const x = ((b + 0.5) / BINS) * 100;
-      const y = H - (density[b] / maxD) * (H - 2);
-      d += ` L${x.toFixed(2)},${y.toFixed(1)}`;
-    }
-    d += ` L100,${H} Z`;
-    return d;
+    return computeKdePath(moves.map((m) => m.atMs), totalMs);
   }, [props.moves]);
 
   if (!path) return null;

@@ -31,6 +31,7 @@ export type LeaderboardEntry = {
   username: string;
   width: number;
   height: number;
+  kdePath?: string;
 };
 
 export type ReplayMove = { seq: number; atMs: number; idx: number; state: CellState };
