@@ -400,7 +400,7 @@ export default function NonogramPlayer(props: {
       }
     }
 
-    return { gridTemplateColumns: `repeat(${cols}, var(--cell-size, 28px))`, cells: items };
+    return { gridTemplateColumns: `repeat(${cols}, minmax(var(--cell-min, 18px), var(--cell-size, 28px)))`, cells: items };
   }, [puzzle, state]);
 
   return (

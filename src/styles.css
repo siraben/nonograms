@@ -403,7 +403,6 @@ a {
   display: grid;
   gap: 0;
   user-select: none;
-  max-width: max-content;
   margin: 0 auto;
 }
 
