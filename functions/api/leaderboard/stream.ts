@@ -5,11 +5,12 @@ import { periodCutoff, queryLeaderboard } from "../../lib/leaderboard";
 
 async function fetchBoth(db: D1Database, period: string | null) {
   const cutoff = periodCutoff(period);
-  const [r5, r10] = await Promise.all([
+  const [r5, r10, r15] = await Promise.all([
     queryLeaderboard(db, 5, cutoff, 50),
     queryLeaderboard(db, 10, cutoff, 50),
+    queryLeaderboard(db, 15, cutoff, 50),
   ]);
-  return { leaderboard5: r5.results, leaderboard10: r10.results };
+  return { leaderboard5: r5.results, leaderboard10: r10.results, leaderboard15: r15.results };
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {

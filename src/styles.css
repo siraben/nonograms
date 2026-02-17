@@ -237,9 +237,17 @@ a {
 }
 
 .leaderboard-cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+
+.leaderboard-cols > .card {
+  flex: 1 0 300px;
+  min-width: 300px;
+  scroll-snap-align: start;
 }
 
 .pagination {
@@ -268,8 +276,9 @@ a {
 }
 
 @media (max-width: 540px) {
-  .leaderboard-cols {
-    grid-template-columns: 1fr;
+  .leaderboard-cols > .card {
+    flex: 1 0 260px;
+    min-width: 260px;
   }
 }
 

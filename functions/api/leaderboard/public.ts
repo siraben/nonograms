@@ -30,9 +30,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const url = new URL(request.url);
   const cutoff = periodCutoff(url.searchParams.get("period"));
 
-  const [r5, r10] = await Promise.all([
+  const [r5, r10, r15] = await Promise.all([
     queryLeaderboard(env.DB, 5, cutoff, 3),
     queryLeaderboard(env.DB, 10, cutoff, 3),
+    queryLeaderboard(env.DB, 15, cutoff, 3),
   ]);
 
   const mask = (rows: typeof r5.results) =>
@@ -47,5 +48,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   return json({
     leaderboard5: mask(r5.results),
     leaderboard10: mask(r10.results),
+    leaderboard15: mask(r15.results),
   });
 };
