@@ -4,7 +4,15 @@ compatibility_date = "2025-01-01"
 # Wrangler's Pages commands use this for local dev / deploy.
 pages_build_output_dir = "dist"
 
+# Production (main branch)
 [[d1_databases]]
 binding = "DB"
 database_name = "nonogram-db"
 database_id = "3e4ae329-f1bd-484d-8b74-2abee9b286df"
+
+# Preview (non-main branches)
+[env.preview]
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "nonogram-db-dev"
+database_id = "ba4cb551-89bd-4550-9e40-87bc59e10690"
