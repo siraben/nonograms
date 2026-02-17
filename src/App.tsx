@@ -9,6 +9,7 @@ import { useOnline } from "./useOnline";
 import { genPuzzle } from "../functions/lib/puzzle";
 import { randomU32 } from "../functions/lib/rng";
 import { Sun, Moon, CircleHelp, Share, LogOut, ChevronLeft, ChevronRight, SkipBack, Play as PlayIcon, Pause } from "lucide-react";
+import { Modal, Pagination, BackButton, CardHeader } from "./ui";
 
 type Route =
   | { name: "login" }
@@ -298,21 +299,7 @@ export default function App() {
       </div>
 
       {helpOpen && (
-        <div
-          className="modal-overlay"
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setHelpOpen(false);
-          }}
-        >
-          <div className="modal" role="dialog" aria-modal="true" aria-label="Help">
-            <div className="modal-head">
-              <div className="modal-title">Help</div>
-              <button className="modal-close" onClick={() => setHelpOpen(false)} aria-label="Close help">
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
+        <Modal title="Help" ariaLabel="Help" onClose={() => setHelpOpen(false)}>
               <h3>How to play</h3>
               <p className="help-text">
                 Fill in cells to match the clue numbers. Each number tells you the length
@@ -375,9 +362,7 @@ export default function App() {
                 <li>Leaderboard is per puzzle size</li>
                 <li>Only new games count towards the leaderboard</li>
               </ul>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {changePwOpen && (
@@ -482,52 +467,36 @@ function ChangePasswordModal(props: {
   }
 
   return (
-    <div
-      className="modal-overlay"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) props.onClose();
-      }}
-    >
-      <div className="modal" role="dialog" aria-modal="true" aria-label="Change password">
-        <div className="modal-head">
-          <div className="modal-title">Change password</div>
-          <button className="modal-close" onClick={props.onClose} aria-label="Close">
-            &times;
+    <Modal title="Change password" ariaLabel="Change password" onClose={props.onClose}>
+      <form onSubmit={submit}>
+        <div className="field">
+          <label>Current password</label>
+          <input
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+        </div>
+        <div className="field">
+          <label>New password</label>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </div>
+        <div className="row">
+          <button className="btn primary" disabled={submitting}>
+            {submitting ? "Saving..." : "Save"}
+          </button>
+          <button type="button" className="btn" onClick={props.onClose}>
+            Cancel
           </button>
         </div>
-        <div className="modal-body">
-          <form onSubmit={submit}>
-            <div className="field">
-              <label>Current password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-            <div className="field">
-              <label>New password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="row">
-              <button className="btn primary" disabled={submitting}>
-                {submitting ? "Saving..." : "Save"}
-              </button>
-              <button type="button" className="btn" onClick={props.onClose}>
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -815,27 +784,15 @@ function PublicLeaderboard() {
         )}
       </div>
       {signupPrompt && (
-        <div
-          className="modal-overlay"
-          role="presentation"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) setSignupPrompt(false); }}
-        >
-          <div className="modal" role="dialog" aria-modal="true" aria-label="Sign up required">
-            <div className="modal-head">
-              <div className="modal-title">Sign up to play</div>
-              <button className="modal-close" onClick={() => setSignupPrompt(false)} aria-label="Close">&times;</button>
-            </div>
-            <div className="modal-body">
-              <p className="help-text">
-                Create an account to play online puzzles, compete on the leaderboard, and watch replays.
-              </p>
-              <div className="btn-group" style={{ marginTop: 12 }}>
-                <button className="btn primary" onClick={() => { setSignupPrompt(false); nav("/register"); }}>Register</button>
-                <button className="btn" onClick={() => { setSignupPrompt(false); nav("/login"); }}>Login</button>
-              </div>
-            </div>
+        <Modal title="Sign up to play" ariaLabel="Sign up required" onClose={() => setSignupPrompt(false)}>
+          <p className="help-text">
+            Create an account to play online puzzles, compete on the leaderboard, and watch replays.
+          </p>
+          <div className="btn-group" style={{ marginTop: 12 }}>
+            <button className="btn primary" onClick={() => { setSignupPrompt(false); nav("/register"); }}>Register</button>
+            <button className="btn" onClick={() => { setSignupPrompt(false); nav("/login"); }}>Login</button>
           </div>
-        </div>
+        </Modal>
       )}
     </>
   );
@@ -993,20 +950,11 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             const rankOffset = page * PAGE_SIZE;
             return (
             <div key={label} className="card">
-              <div className="card-header-row">
-                <h2>{label} Leaderboard</h2>
+              <CardHeader title={`${label} Leaderboard`}>
                 {entries.length > PAGE_SIZE && (
-                  <div className="pagination">
-                    <button className="btn sm icon-btn" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Previous page">
-                      <ChevronLeft size={14} />
-                    </button>
-                    <span className="pagination-info">{page + 1}/{totalPages}</span>
-                    <button className="btn sm icon-btn" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} aria-label="Next page">
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
+                  <Pagination page={page} onPageChange={setPage} totalPages={totalPages} />
                 )}
-              </div>
+              </CardHeader>
               {loading ? (
                 <div className="muted">Loading...</div>
               ) : entries.length === 0 ? (
@@ -1080,11 +1028,7 @@ function OfflinePlay(props: {
 
   return (
     <>
-      <div className="back-nav">
-        <button className="btn" onClick={() => nav("/")}>
-          &larr; Back
-        </button>
-      </div>
+      <BackButton />
       <div className="card">
         <h2>Offline</h2>
         <NonogramPlayer
@@ -1200,11 +1144,7 @@ function Play(props: {
 
   return (
     <>
-      <div className="back-nav">
-        <button className="btn" onClick={() => nav("/")}>
-          &larr; Back
-        </button>
-      </div>
+      <BackButton />
       <div className="card">
         <h2>Play</h2>
         {loading && <div className="muted">Loading...</div>}
@@ -1473,11 +1413,7 @@ function Replay(props: {
   if (checking) {
     return (
       <>
-        <div className="back-nav">
-          <button className="btn" onClick={() => nav("/")}>
-            &larr; Back
-          </button>
-        </div>
+        <BackButton />
         <div className="card"><div className="muted">Loading...</div></div>
       </>
     );
@@ -1486,40 +1422,23 @@ function Replay(props: {
   return (
     <>
       {showConfirmModal && (
-        <div
-          className="modal-overlay"
-          role="presentation"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) { setShowConfirmModal(false); nav("/"); } }}
-        >
-          <div className="modal" role="dialog" aria-modal="true" aria-label="Watch replay">
-            <div className="modal-head">
-              <div className="modal-title">Watch replay?</div>
-              <button className="modal-close" onClick={() => { setShowConfirmModal(false); nav("/"); }} aria-label="Close">&times;</button>
-            </div>
-            <div className="modal-body">
-              <p className="help-text">
-                If you watch this replay, your times for this puzzle won't count for the leaderboard.
-              </p>
-              <div className="btn-group" style={{ marginTop: 12 }}>
-                <button className="btn primary" onClick={() => { setShowConfirmModal(false); setConfirmed(true); }}>
-                  Watch anyway
-                </button>
-                <button className="btn" onClick={() => { setShowConfirmModal(false); nav("/"); }}>
-                  Go back
-                </button>
-              </div>
-            </div>
+        <Modal title="Watch replay?" ariaLabel="Watch replay" onClose={() => { setShowConfirmModal(false); nav("/"); }}>
+          <p className="help-text">
+            If you watch this replay, your times for this puzzle won't count for the leaderboard.
+          </p>
+          <div className="btn-group" style={{ marginTop: 12 }}>
+            <button className="btn primary" onClick={() => { setShowConfirmModal(false); setConfirmed(true); }}>
+              Watch anyway
+            </button>
+            <button className="btn" onClick={() => { setShowConfirmModal(false); nav("/"); }}>
+              Go back
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
-      <div className="back-nav">
-        <button className="btn" onClick={() => nav("/")}>
-          &larr; Back
-        </button>
-      </div>
+      <BackButton />
       <div className="card">
-        <div className="card-header-row">
-          <h2>{meta ? `${meta.username}'s Replay` : "Replay"}</h2>
+        <CardHeader title={meta ? `${meta.username}'s Replay` : "Replay"}>
           <div className="row" style={{ gap: 6 }}>
             <button
               className="btn icon-btn"
@@ -1535,7 +1454,7 @@ function Replay(props: {
               </button>
             )}
           </div>
-        </div>
+        </CardHeader>
         {meta && (
           <div className="replay-meta">
             <span>{(replayElapsed / 1000).toFixed(1)}s{meta.durationMs ? ` / ${(meta.durationMs / 1000).toFixed(1)}s` : ""}</span>
@@ -1738,36 +1657,13 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
 
   return (
     <>
-      <div className="back-nav">
-        <button className="btn" onClick={() => nav("/")}>
-          &larr; Back
-        </button>
-      </div>
+      <BackButton />
       <div className="card">
-        <div className="card-header-row">
-          <h2>My Games</h2>
+        <CardHeader title="My Games">
           {(hasMore || page > 0) && (
-            <div className="pagination">
-              <button
-                className="btn sm icon-btn"
-                disabled={page === 0}
-                onClick={() => setPage(page - 1)}
-                aria-label="Previous page"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span className="pagination-info">{page + 1}</span>
-              <button
-                className="btn sm icon-btn"
-                disabled={!hasMore}
-                onClick={() => setPage(page + 1)}
-                aria-label="Next page"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
+            <Pagination page={page} onPageChange={setPage} hasMore={hasMore} />
           )}
-        </div>
+        </CardHeader>
         <label className="row muted realtime-toggle" style={{ marginBottom: 8 }}>
           <input
             type="checkbox"
@@ -1923,19 +1819,14 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
 
   return (
     <>
-      <div className="back-nav">
-        <button className="btn" onClick={() => nav("/")}>
-          &larr; Back
-        </button>
-      </div>
+      <BackButton />
 
       <div className="card">
-        <div className="card-header-row">
-          <h2>Admin Dashboard</h2>
+        <CardHeader title="Admin Dashboard">
           <button className="btn sm" onClick={runCleanup}>
             Cleanup stale
           </button>
-        </div>
+        </CardHeader>
         {loading ? (
           <div className="muted">Loading...</div>
         ) : stats ? (
