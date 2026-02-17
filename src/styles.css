@@ -800,6 +800,23 @@ a {
   margin: 4px 0 8px;
 }
 
+.help-text ul {
+  list-style: none;
+  padding: 0;
+}
+
+.help-text li {
+  padding: 2px 0 2px 16px;
+  line-height: 1.5;
+  text-indent: -16px;
+}
+
+.help-text li::before {
+  content: "\2022";
+  color: var(--muted);
+  margin-right: 8px;
+}
+
 .help-diagram {
   display: flex;
   justify-content: center;
