@@ -1666,7 +1666,7 @@ function Replay(props: {
               <div className="transport-btns">
                 <button
                   className="btn icon-btn"
-                  onClick={() => applyTo(0)}
+                  onClick={() => { applyTo(0); if (playing) play(); }}
                   disabled={!moves.length}
                   aria-label="Reset"
                   title="Reset"
