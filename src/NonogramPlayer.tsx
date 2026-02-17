@@ -340,14 +340,16 @@ export default function NonogramPlayer(props: {
     setHoverCol(-1);
   }
 
+  const fadeRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const updateScrollHints = useCallback(() => {
     const wrap = wrapRef.current;
-    if (!wrap) return;
-    wrap.classList.toggle("can-scroll-left", wrap.scrollLeft > 2);
-    wrap.classList.toggle("can-scroll-right", wrap.scrollLeft + wrap.clientWidth < wrap.scrollWidth - 2);
+    const fade = fadeRef.current;
+    if (!wrap || !fade) return;
+    fade.classList.toggle("can-scroll-left", wrap.scrollLeft > 2);
+    fade.classList.toggle("can-scroll-right", wrap.scrollLeft + wrap.clientWidth < wrap.scrollWidth - 2);
   }, []);
 
   useEffect(() => {
@@ -438,61 +440,63 @@ export default function NonogramPlayer(props: {
         </div>
       )}
 
-      <div className="nonogram-wrap" ref={wrapRef}>
-        <div
-          ref={gridRef}
-          className={`nonogram${!props.readonly ? " interactive" : ""}`}
-          style={{ gridTemplateColumns }}
-          onMouseLeave={() => {
-            setHoverRow(-1);
-            setHoverCol(-1);
-          }}
-          onContextMenu={(e) => e.preventDefault()}
-          onTouchStart={!props.readonly ? onTouchStart : undefined}
-          onTouchMove={!props.readonly ? onTouchMove : undefined}
-          onTouchEnd={!props.readonly ? onTouchEnd : undefined}
-        >
-          {cells.map((it, i) => {
-            if (it.kind === "empty") return <div key={i} className="clue-empty" />;
-            if (it.kind === "clue") {
-              const highlight =
-                (it.clueRow !== undefined && it.clueRow === hoverRow) ||
-                (it.clueCol !== undefined && it.clueCol === hoverCol);
+      <div className="nonogram-fade" ref={fadeRef}>
+        <div className="nonogram-wrap" ref={wrapRef}>
+          <div
+            ref={gridRef}
+            className={`nonogram${!props.readonly ? " interactive" : ""}`}
+            style={{ gridTemplateColumns }}
+            onMouseLeave={() => {
+              setHoverRow(-1);
+              setHoverCol(-1);
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+            onTouchStart={!props.readonly ? onTouchStart : undefined}
+            onTouchMove={!props.readonly ? onTouchMove : undefined}
+            onTouchEnd={!props.readonly ? onTouchEnd : undefined}
+          >
+            {cells.map((it, i) => {
+              if (it.kind === "empty") return <div key={i} className="clue-empty" />;
+              if (it.kind === "clue") {
+                const highlight =
+                  (it.clueRow !== undefined && it.clueRow === hoverRow) ||
+                  (it.clueCol !== undefined && it.clueCol === hoverCol);
+                const cls =
+                  "clue" +
+                  (it.rmaj ? " rmaj" : "") +
+                  (it.cmaj ? " cmaj" : "") +
+                  (highlight ? " highlight" : "");
+                return (
+                  <div key={i} className={cls}>
+                    {it.text}
+                  </div>
+                );
+              }
               const cls =
-                "clue" +
+                "cell" +
                 (it.rmaj ? " rmaj" : "") +
                 (it.cmaj ? " cmaj" : "") +
-                (highlight ? " highlight" : "");
+                (it.state === 1 ? " filled" : it.state === 2 ? " x" : "");
               return (
-                <div key={i} className={cls}>
-                  {it.text}
-                </div>
+                <div
+                  key={i}
+                  className={cls}
+                  data-idx={it.idx}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onCellDown(it.idx);
+                    setHoverRow(it.row);
+                    setHoverCol(it.col);
+                  }}
+                  onMouseEnter={() => {
+                    setHoverRow(it.row);
+                    setHoverCol(it.col);
+                    onCellEnter(it.idx);
+                  }}
+                />
               );
-            }
-            const cls =
-              "cell" +
-              (it.rmaj ? " rmaj" : "") +
-              (it.cmaj ? " cmaj" : "") +
-              (it.state === 1 ? " filled" : it.state === 2 ? " x" : "");
-            return (
-              <div
-                key={i}
-                className={cls}
-                data-idx={it.idx}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  onCellDown(it.idx);
-                  setHoverRow(it.row);
-                  setHoverCol(it.col);
-                }}
-                onMouseEnter={() => {
-                  setHoverRow(it.row);
-                  setHoverCol(it.col);
-                  onCellEnter(it.idx);
-                }}
-              />
-            );
-          })}
+            })}
+          </div>
         </div>
       </div>
 

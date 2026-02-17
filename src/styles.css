@@ -360,6 +360,15 @@ a {
     grid-column: 1 / -1;
     justify-self: end;
   }
+
+  .nonogram-fade {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .nonogram {
+    border-radius: 8px;
+  }
 }
 
 .item {
@@ -419,14 +428,12 @@ a {
   display: block;
 }
 
-.nonogram-wrap {
-  overflow: auto;
-  padding: 4px;
+.nonogram-fade {
   position: relative;
 }
 
-.nonogram-wrap::before,
-.nonogram-wrap::after {
+.nonogram-fade::before,
+.nonogram-fade::after {
   content: "";
   position: absolute;
   top: 0;
@@ -438,22 +445,27 @@ a {
   transition: opacity 0.2s;
 }
 
-.nonogram-wrap::before {
+.nonogram-fade::before {
   left: 0;
   background: linear-gradient(to right, var(--bg), transparent);
 }
 
-.nonogram-wrap::after {
+.nonogram-fade::after {
   right: 0;
   background: linear-gradient(to left, var(--bg), transparent);
 }
 
-.nonogram-wrap.can-scroll-left::before {
+.nonogram-fade.can-scroll-left::before {
   opacity: 1;
 }
 
-.nonogram-wrap.can-scroll-right::after {
+.nonogram-fade.can-scroll-right::after {
   opacity: 1;
+}
+
+.nonogram-wrap {
+  overflow: auto;
+  padding: 4px;
 }
 
 .nonogram {
