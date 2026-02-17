@@ -957,7 +957,10 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
   const [leader15, setLeader15] = useState<LeaderboardEntry[]>([]);
   const [leader20, setLeader20] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<Period>("all");
+  const [period, setPeriod] = useState<Period>(() => {
+    const saved = localStorage.getItem("leaderboard-period");
+    return saved === "day" || saved === "week" || saved === "month" || saved === "all" ? saved : "day";
+  });
   const [page5, setPage5] = useState(0);
   const [page10, setPage10] = useState(0);
   const [page15, setPage15] = useState(0);
@@ -1066,7 +1069,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             <button
               key={p}
               className={`btn sm${period === p ? " primary" : ""}`}
-              onClick={() => { setPeriod(p); setPage5(0); setPage10(0); setPage15(0); setPage20(0); }}
+              onClick={() => { setPeriod(p); localStorage.setItem("leaderboard-period", p); setPage5(0); setPage10(0); setPage15(0); setPage20(0); }}
             >
               {PERIOD_LABELS[p]}
             </button>
