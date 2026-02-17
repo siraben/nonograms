@@ -878,21 +878,25 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
 
   useEffect(() => {
     if (!props.online) return;
+    let cancelled = false;
+    const fetchLeaderboard = async () => {
+      try {
+        const data = await api<{ leaderboard5: LeaderboardEntry[]; leaderboard10: LeaderboardEntry[]; leaderboard15: LeaderboardEntry[]; leaderboard20: LeaderboardEntry[] }>(`/api/leaderboard/stream?period=${period}`);
+        if (cancelled) return;
+        setLeader5(data.leaderboard5);
+        setLeader10(data.leaderboard10);
+        setLeader15(data.leaderboard15);
+        setLeader20(data.leaderboard20);
+        setLoading(false);
+        requestAnimationFrame(updateScrollHints);
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
     setLoading(true);
-    const es = new EventSource(`/api/leaderboard/stream?period=${period}`);
-    es.onmessage = (e) => {
-      const data = JSON.parse(e.data) as { leaderboard5: LeaderboardEntry[]; leaderboard10: LeaderboardEntry[]; leaderboard15: LeaderboardEntry[]; leaderboard20: LeaderboardEntry[] };
-      setLeader5(data.leaderboard5);
-      setLeader10(data.leaderboard10);
-      setLeader15(data.leaderboard15);
-      setLeader20(data.leaderboard20);
-      setLoading(false);
-      requestAnimationFrame(updateScrollHints);
-    };
-    es.onerror = () => {
-      setLoading(false);
-    };
-    return () => es.close();
+    fetchLeaderboard();
+    const id = setInterval(fetchLeaderboard, 10_000);
+    return () => { cancelled = true; clearInterval(id); };
   }, [props.online, period]);
 
   async function newGame(puzzleId?: string, size?: number) {

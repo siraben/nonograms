@@ -21,68 +21,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const url = new URL(request.url);
   const period = url.searchParams.get("period");
 
-  const encoder = new TextEncoder();
-  let closed = false;
+  const data = await fetchBoth(env.DB, period);
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (data: unknown) => {
-        if (closed) return;
-        try {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-        } catch {
-          closed = true;
-        }
-      };
-
-      // Send initial data and record it for dedup
-      let lastJson: string;
-      try {
-        const initial = await fetchBoth(env.DB, period);
-        lastJson = JSON.stringify(initial);
-        send(initial);
-      } catch {
-        closed = true;
-        controller.close();
-        return;
-      }
-
-      // Poll every 10 seconds, up to 5 minutes
-      const INTERVAL = 10_000;
-      const MAX_DURATION = 5 * 60_000;
-      let elapsed = 0;
-
-      const poll = async () => {
-        if (closed) return;
-        elapsed += INTERVAL;
-        if (elapsed >= MAX_DURATION) {
-          if (!closed) { closed = true; controller.close(); }
-          return;
-        }
-        try {
-          const data = await fetchBoth(env.DB, period);
-          const json = JSON.stringify(data);
-          if (json !== lastJson) {
-            lastJson = json;
-            send(data);
-          }
-        } catch {
-          // ignore transient errors
-        }
-        if (!closed) setTimeout(poll, INTERVAL);
-      };
-
-      setTimeout(poll, INTERVAL);
-    },
-    cancel() {
-      closed = true;
-    },
-  });
-
-  return new Response(stream, {
+  return new Response(JSON.stringify(data), {
     headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=10",
     },
   });
 };
