@@ -961,6 +961,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
   const [page15, setPage15] = useState(0);
   const [page20, setPage20] = useState(0);
   const PAGE_SIZE = 10;
+  const leaderColsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!props.online) return;
@@ -1050,7 +1051,24 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             </button>
           ))}
         </div>
-        <div className="leaderboard-cols">
+        <div className="leaderboard-nav">
+          <button
+            className="btn sm icon-btn"
+            onClick={() => { const el = leaderColsRef.current; if (el) el.scrollBy({ left: -el.clientWidth, behavior: "smooth" }); }}
+            aria-label="Scroll leaderboard left"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <span className="muted">Leaderboards</span>
+          <button
+            className="btn sm icon-btn"
+            onClick={() => { const el = leaderColsRef.current; if (el) el.scrollBy({ left: el.clientWidth, behavior: "smooth" }); }}
+            aria-label="Scroll leaderboard right"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+        </div>
+        <div className="leaderboard-cols" ref={leaderColsRef}>
           {([["5x5", leader5, page5, setPage5], ["10x10", leader10, page10, setPage10], ["15x15", leader15, page15, setPage15], ["20x20", leader20, page20, setPage20]] as [string, LeaderboardEntry[], number, (n: number) => void][]).map(([label, entries, page, setPage]) => {
             const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
             const pageEntries = entries.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
