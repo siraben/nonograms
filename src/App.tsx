@@ -904,13 +904,13 @@ function PublicLeaderboard() {
                     {(e.durationMs / 1000).toFixed(2)}s
                   </span>
                 </div>
-                {e.kdePath && (
-                  <svg className="mini-kde" viewBox="0 0 100 28" preserveAspectRatio="none"><path d={e.kdePath} /></svg>
-                )}
                 <div className="meta">{fmtTime(e.finishedAt)}</div>
                 <div className="row item-actions">
                   <button className="btn sm" onClick={() => setSignupPrompt(true)}>play</button>
                   <button className="btn sm" onClick={() => setSignupPrompt(true)}>watch replay</button>
+                  {e.kdePath && (
+                    <svg className="mini-kde" viewBox="0 0 100 28" preserveAspectRatio="none"><path d={e.kdePath} /></svg>
+                  )}
                 </div>
               </div>
             ))}
@@ -1128,9 +1128,6 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
                           {(e.durationMs / 1000).toFixed(2)}s
                         </span>
                       </div>
-                      {e.kdePath && (
-                        <svg className="mini-kde" viewBox="0 0 100 28" preserveAspectRatio="none"><path d={e.kdePath} /></svg>
-                      )}
                       <div className="meta">
                         {e.puzzleId.slice(0, 8)} &mdash; {fmtTime(e.finishedAt)}
                       </div>
@@ -1147,6 +1144,9 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
                         >
                           watch replay
                         </button>
+                        {e.kdePath && (
+                          <svg className="mini-kde" viewBox="0 0 100 28" preserveAspectRatio="none"><path d={e.kdePath} /></svg>
+                        )}
                       </div>
                     </div>
                     );

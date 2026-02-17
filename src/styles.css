@@ -511,10 +511,10 @@ a {
 }
 
 .mini-kde {
-  display: block;
-  width: 100%;
+  flex: 1 1 0;
+  min-width: 60px;
   height: 20px;
-  margin: 4px 0;
+  margin-left: auto;
 }
 
 .mini-kde path {
