@@ -396,8 +396,8 @@ export default function App() {
                 </button>
               )}
               <div className="pill pill-clickable" onClick={() => setChangePwOpen(true)}>{user.username}</div>
-              <button className="btn danger" onClick={doLogout}>
-                logout
+              <button className="btn danger icon-btn" onClick={doLogout} aria-label="Log out" title="Log out">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 1H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h2M9 10l3-3-3-3M12 7H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             </>
           )}
