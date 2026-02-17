@@ -2,6 +2,7 @@ import type { Env } from "../../lib/auth";
 import { requireUser } from "../../lib/auth";
 import { err, json } from "../../lib/http";
 import { puzzleTitle } from "../../lib/puzzle";
+import { materializeState } from "../../lib/state";
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request, params }) => {
   const authed = await requireUser(env, request);
@@ -11,7 +12,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
   const a = await env.DB.prepare(
     `SELECT a.id, a.puzzle_id as puzzleId, a.eligible as eligible, a.completed as completed,
             a.started_at as startedAt, a.finished_at as finishedAt, a.duration_ms as durationMs,
-            a.current_state_json as stateJson,
             p.width as width, p.height as height, p.row_clues_json as rowCluesJson, p.col_clues_json as colCluesJson
      FROM attempts a
      JOIN puzzles p ON p.id = a.puzzle_id
@@ -26,7 +26,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
       startedAt: string | null;
       finishedAt: string | null;
       durationMs: number | null;
-      stateJson: string;
       width: number;
       height: number;
       rowCluesJson: string;
@@ -35,7 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
 
   if (!a) return err(404, "attempt not found");
 
-  const state = JSON.parse(a.stateJson);
+  const state = await materializeState(env.DB, a.id, a.width * a.height);
   const attempt = {
     id: a.id,
     puzzleId: a.puzzleId,
