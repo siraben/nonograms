@@ -360,7 +360,7 @@ export default function App() {
                 <li>Timer starts when you click Start</li>
                 <li>Puzzle auto-submits when solved correctly</li>
                 <li>Leaderboard is per puzzle size</li>
-                <li>Only new games count towards the leaderboard</li>
+                <li>Only new or unseen games count towards the leaderboard</li>
               </ul>
         </Modal>
       )}
@@ -907,7 +907,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
         </div>
         {props.online && (
           <div className="hint gap-above">
-            Only new games count towards the leaderboard.
+            Only new or unseen games count towards the leaderboard.
           </div>
         )}
       </div>
