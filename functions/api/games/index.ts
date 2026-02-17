@@ -1,7 +1,7 @@
 import type { Env } from "../../lib/auth";
 import { requireUser } from "../../lib/auth";
 import { json } from "../../lib/http";
-import { computeKdePath } from "../../../lib/kde";
+import { computeAndCacheKdePaths } from "../../lib/kde-cache";
 
 const PAGE_SIZE = 10;
 
@@ -20,7 +20,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const rows = await env.DB.prepare(
     `SELECT a.id AS attemptId, a.puzzle_id AS puzzleId, a.created_at AS createdAt,
             a.started_at AS startedAt, a.finished_at AS finishedAt,
-            a.duration_ms AS durationMs, a.completed, a.eligible,
+            a.duration_ms AS durationMs, a.kde_path AS kdePath, a.completed, a.eligible,
             p.width, p.height
      FROM attempts a
      JOIN puzzles p ON p.id = a.puzzle_id
@@ -36,6 +36,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
       startedAt: string | null;
       finishedAt: string | null;
       durationMs: number | null;
+      kdePath: string | null;
       completed: number;
       eligible: number;
       width: number;
@@ -45,20 +46,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const hasMore = rows.results.length > PAGE_SIZE;
   const items = rows.results.slice(0, PAGE_SIZE);
 
-  const completedIds = items.filter((r) => r.completed && r.finishedAt && r.durationMs).map((r) => r.attemptId);
-
-  let movesByAttempt = new Map<string, number[]>();
-  if (completedIds.length > 0) {
-    const placeholders = completedIds.map(() => "?").join(",");
-    const moves = await env.DB.prepare(
-      `SELECT attempt_id, at_ms FROM attempt_moves WHERE attempt_id IN (${placeholders}) ORDER BY at_ms`
-    ).bind(...completedIds).all<{ attempt_id: string; at_ms: number }>();
-    for (const m of moves.results) {
-      let arr = movesByAttempt.get(m.attempt_id);
-      if (!arr) { arr = []; movesByAttempt.set(m.attempt_id, arr); }
-      arr.push(m.at_ms);
-    }
-  }
+  await computeAndCacheKdePaths(
+    env.DB,
+    items
+      .filter((r) => r.completed === 1 && r.finishedAt !== null && r.durationMs !== null)
+  );
 
   const games = items.map((r) => {
     let status: "in_progress" | "completed" | "abandoned";
@@ -69,9 +61,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
     } else {
       status = "in_progress";
     }
-    const atMs = movesByAttempt.get(r.attemptId);
-    const kdePath = atMs && atMs.length >= 2 && r.durationMs
-      ? computeKdePath(atMs, r.durationMs) : undefined;
+    const kdePath = r.kdePath || undefined;
     return {
       attemptId: r.attemptId,
       puzzleId: r.puzzleId,

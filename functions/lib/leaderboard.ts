@@ -1,4 +1,4 @@
-import { computeKdePath } from "../../lib/kde";
+import { computeAndCacheKdePaths } from "./kde-cache";
 
 export type LeaderboardRow = {
   attemptId: string;
@@ -9,6 +9,10 @@ export type LeaderboardRow = {
   width: number;
   height: number;
   kdePath?: string;
+};
+
+type LeaderboardDbRow = Omit<LeaderboardRow, "kdePath"> & {
+  kdePath: string | null;
 };
 
 export function periodCutoff(period: string | null): string | null {
@@ -32,6 +36,7 @@ export async function queryLeaderboard(db: D1Database, size: number | null, cuto
             a.puzzle_id as puzzleId,
             a.duration_ms as durationMs,
             a.finished_at as finishedAt,
+            a.kde_path as kdePath,
             u.username as username,
             p.width as width,
             p.height as height
@@ -43,33 +48,17 @@ export async function queryLeaderboard(db: D1Database, size: number | null, cuto
        AND (?2 IS NULL OR a.finished_at >= ?2)
      ORDER BY a.duration_ms ASC
      LIMIT ?3`
-  ).bind(size, cutoff, limit).all<LeaderboardRow>();
+  ).bind(size, cutoff, limit).all<LeaderboardDbRow>();
 
   if (rows.results.length === 0) return rows;
 
-  // Batch-fetch move timestamps for KDE computation
-  const ids = rows.results.map((r) => r.attemptId);
-  const placeholders = ids.map(() => "?").join(",");
-  const moves = await db
-    .prepare(
-      `SELECT attempt_id, at_ms FROM attempt_moves WHERE attempt_id IN (${placeholders}) ORDER BY at_ms`
-    )
-    .bind(...ids)
-    .all<{ attempt_id: string; at_ms: number }>();
+  await computeAndCacheKdePaths(db, rows.results);
 
-  const movesByAttempt = new Map<string, number[]>();
-  for (const m of moves.results) {
-    let arr = movesByAttempt.get(m.attempt_id);
-    if (!arr) { arr = []; movesByAttempt.set(m.attempt_id, arr); }
-    arr.push(m.at_ms);
-  }
-
-  for (const row of rows.results) {
-    const atMs = movesByAttempt.get(row.attemptId);
-    if (atMs && atMs.length >= 2) {
-      row.kdePath = computeKdePath(atMs, row.durationMs);
-    }
-  }
-
-  return rows;
+  return {
+    ...rows,
+    results: rows.results.map((r) => ({
+      ...r,
+      kdePath: r.kdePath || undefined,
+    })),
+  };
 }
