@@ -1219,8 +1219,13 @@ function Play(props: {
             puzzle={puzzle}
             initialState={attempt.state}
             startedAt={attempt.startedAt}
+            initialMoveCount={attempt.moveCount}
             onToast={props.onToast}
             onSolved={() => setFinished(true)}
+            onAbandoned={() => {
+              props.onToast({ kind: "bad", msg: "Move limit reached (4000 moves) \u2014 start a new game" });
+              nav("/");
+            }}
           />
         )}
       </div>

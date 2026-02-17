@@ -1,6 +1,7 @@
 import type { Env } from "../../../lib/auth";
 import { requireUser } from "../../../lib/auth";
 import { err, json, readJson } from "../../../lib/http";
+import { MAX_MOVES } from "../../../lib/limits";
 
 type Move = { idx: number; state: number; atMs: number };
 type Body = { moves: Move[] };
@@ -58,9 +59,23 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   ).bind(attemptId).first<{ maxSeq: number }>();
   let seq = seqRow?.maxSeq ?? 0;
 
+  // Enforce move limit
+  let abandoned = false;
+  let movesToInsert = sorted;
+  if (seq >= MAX_MOVES) {
+    // Already at limit — auto-abandon and accept no more moves
+    await env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId).run();
+    return json({ ok: true, abandoned: true, moveCount: MAX_MOVES });
+  }
+  if (seq + sorted.length > MAX_MOVES) {
+    // Truncate batch to fit within limit
+    movesToInsert = sorted.slice(0, MAX_MOVES - seq);
+    abandoned = true;
+  }
+
   // Build batch: one insert per move (history only, state materialized on read)
   const stmts: D1PreparedStatement[] = [];
-  for (const m of sorted) {
+  for (const m of movesToInsert) {
     seq++;
     stmts.push(
       env.DB.prepare(
@@ -69,7 +84,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     );
   }
 
+  if (abandoned) {
+    stmts.push(env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId));
+  }
+
   await env.DB.batch(stmts);
+
+  if (abandoned) {
+    return json({ ok: true, abandoned: true, moveCount: MAX_MOVES });
+  }
 
   return json({ ok: true });
 };

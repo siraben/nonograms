@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import type { CellState, Puzzle, Toast } from "./types";
+import { MAX_MOVES } from "../functions/lib/limits";
 
 function fmtTime(ms: number): string {
   const s = Math.floor(ms / 1000);
@@ -50,8 +51,10 @@ export default function NonogramPlayer(props: {
   startedAt?: string | null;
   readonly?: boolean;
   offline?: boolean;
+  initialMoveCount?: number;
   onToast: (t: Toast | null) => void;
   onSolved?: () => void;
+  onAbandoned?: () => void;
 }) {
   const { puzzle } = props;
   const [state, setState] = useState<CellState[]>(() => props.initialState);
@@ -73,12 +76,16 @@ export default function NonogramPlayer(props: {
   const lastTouchIdx = useRef(-1);
   const finishing = useRef(false);
   const autoFinishRetries = useRef(0);
+  const moveCount = useRef(props.initialMoveCount ?? 0);
+  const [moveLimited, setMoveLimited] = useState(false);
 
   useEffect(() => {
     setState(props.initialState);
     setSolved(false);
+    setMoveLimited(false);
     finishing.current = false;
     autoFinishRetries.current = 0;
+    moveCount.current = props.initialMoveCount ?? 0;
     moveBuffer.current = [];
     if (flushTimer.current) { clearTimeout(flushTimer.current); flushTimer.current = null; }
   }, [props.attemptId, props.initialState]);
@@ -158,7 +165,7 @@ export default function NonogramPlayer(props: {
 
   // Mousedown on a cell: cycle it and start drag-painting
   function onCellDown(idx: number) {
-    if (props.readonly || solved) return;
+    if (props.readonly || solved || moveLimited) return;
     dragging.current = true;
     const cur = stateRef.current[idx];
     const newVal = cycleState(cur);
@@ -173,7 +180,7 @@ export default function NonogramPlayer(props: {
 
   // Mouse enters cell while dragging: paint with same value
   function onCellEnter(idx: number) {
-    if (!dragging.current || props.readonly || solved) return;
+    if (!dragging.current || props.readonly || solved || moveLimited) return;
     applyCell(idx, paintValue.current);
   }
 
@@ -186,10 +193,16 @@ export default function NonogramPlayer(props: {
     moveBuffer.current = all.slice(50);
     inFlight.current++;
     setSaving(true);
-    const p = api(
+    const p = api<{ ok: boolean; abandoned?: boolean }>(
       `/api/attempts/${encodeURIComponent(props.attemptId)}/moves`,
       { method: "POST", json: { moves: batch } }
-    ).then(() => {
+    ).then((r) => {
+      if (r.abandoned) {
+        setMoveLimited(true);
+        moveBuffer.current = [];
+        props.onAbandoned?.();
+        return;
+      }
       // If more moves remain, flush the next chunk immediately.
       if (moveBuffer.current.length > 0 && !flushTimer.current) {
         flushTimer.current = window.setTimeout(flushMoves, 0);
@@ -210,10 +223,16 @@ export default function NonogramPlayer(props: {
 
   function queueMove(idx: number, st: CellState) {
     if (props.readonly || props.offline) return;
+    if (moveLimited) return;
+    moveCount.current++;
     const atMs = Math.max(0, Date.now() - startMs.current);
     moveBuffer.current.push({ idx, state: st, atMs });
     if (flushTimer.current) clearTimeout(flushTimer.current);
     flushTimer.current = window.setTimeout(flushMoves, 150);
+    if (moveCount.current >= MAX_MOVES) {
+      setMoveLimited(true);
+      props.onAbandoned?.();
+    }
   }
 
   async function finishAttempt(auto: boolean) {
@@ -300,7 +319,7 @@ export default function NonogramPlayer(props: {
   }
 
   function onTouchStart(e: React.TouchEvent) {
-    if (props.readonly || solved) return;
+    if (props.readonly || solved || moveLimited) return;
     e.preventDefault();
     const touch = e.touches[0];
     const idx = getCellIdx(touch.clientX, touch.clientY);
@@ -321,7 +340,7 @@ export default function NonogramPlayer(props: {
   }
 
   function onTouchMove(e: React.TouchEvent) {
-    if (!dragging.current || props.readonly || solved) return;
+    if (!dragging.current || props.readonly || solved || moveLimited) return;
     e.preventDefault();
     const touch = e.touches[0];
     const idx = getCellIdx(touch.clientX, touch.clientY);
@@ -437,7 +456,7 @@ export default function NonogramPlayer(props: {
 
       {!props.readonly && (
         <div className="game-status">
-          {saving ? "saving..." : solved ? "solved!" : "\u00A0"}
+          {moveLimited ? "Move limit reached" : saving ? "saving..." : solved ? "solved!" : "\u00A0"}
         </div>
       )}
 

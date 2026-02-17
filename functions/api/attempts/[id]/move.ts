@@ -1,6 +1,7 @@
 import type { Env } from "../../../lib/auth";
 import { requireUser } from "../../../lib/auth";
 import { err, json, readJson } from "../../../lib/http";
+import { MAX_MOVES } from "../../../lib/limits";
 
 type Body = { idx: number; state: number };
 
@@ -36,13 +37,38 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   if (n <= 0) return err(500, "bad grid size");
   if (idx < 0 || idx >= n) return err(400, "bad idx");
 
+  // Check move limit
+  const seqRow = await env.DB.prepare(
+    "SELECT COALESCE(MAX(seq), 0) as maxSeq FROM attempt_moves WHERE attempt_id = ?"
+  ).bind(attemptId).first<{ maxSeq: number }>();
+  const maxSeq = seqRow?.maxSeq ?? 0;
+
+  if (maxSeq >= MAX_MOVES) {
+    await env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId).run();
+    return json({ ok: false, abandoned: true });
+  }
+
   const now = new Date();
   const startedAt = new Date(row.startedAt!);
   const atMs = now.getTime() - startedAt.getTime();
 
-  await env.DB.prepare(
-    "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, (SELECT COALESCE(MAX(seq), 0) + 1 FROM attempt_moves WHERE attempt_id = ?), ?, ?, ?, ?)"
-  ).bind(attemptId, attemptId, atMs, idx, st, now.toISOString()).run();
+  const isLastMove = maxSeq === MAX_MOVES - 1;
+
+  const stmts: D1PreparedStatement[] = [
+    env.DB.prepare(
+      "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    ).bind(attemptId, maxSeq + 1, atMs, idx, st, now.toISOString()),
+  ];
+
+  if (isLastMove) {
+    stmts.push(env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId));
+  }
+
+  await env.DB.batch(stmts);
+
+  if (isLastMove) {
+    return json({ ok: true, abandoned: true, atMs });
+  }
 
   return json({ ok: true, atMs });
 };

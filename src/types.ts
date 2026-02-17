@@ -21,6 +21,7 @@ export type Attempt = {
   startedAt: string | null;
   finishedAt: string | null;
   durationMs: number | null;
+  moveCount?: number;
   state: CellState[];
 };
 

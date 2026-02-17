@@ -35,6 +35,16 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
   if (!a) return err(404, "attempt not found");
 
   const state = await materializeState(env.DB, a.id, a.width * a.height);
+
+  // Include move count for started, non-completed attempts
+  let moveCount: number | undefined;
+  if (a.startedAt && a.completed !== 1) {
+    const mcRow = await env.DB.prepare(
+      "SELECT COUNT(*) as cnt FROM attempt_moves WHERE attempt_id = ?"
+    ).bind(a.id).first<{ cnt: number }>();
+    moveCount = mcRow?.cnt ?? 0;
+  }
+
   const attempt = {
     id: a.id,
     puzzleId: a.puzzleId,
@@ -43,6 +53,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
     startedAt: a.startedAt,
     finishedAt: a.finishedAt,
     durationMs: a.durationMs,
+    moveCount,
     state
   };
 
