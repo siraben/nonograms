@@ -480,14 +480,12 @@ a {
 }
 
 .scrubber {
-  margin-top: 8px;
+  flex: 1;
+  min-width: 0;
   padding: 10px 0;
   cursor: grab;
   touch-action: none;
   user-select: none;
-  max-width: 66%;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .scrubber:active {
@@ -804,17 +802,27 @@ a {
   margin-bottom: 10px;
 }
 
-.replay-transport {
+.scrubber-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-top: 12px;
 }
 
+.transport-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .realtime-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
   cursor: pointer;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .turnstile-wrap {

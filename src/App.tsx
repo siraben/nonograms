@@ -1662,26 +1662,31 @@ function Replay(props: {
         )}
         {moves.length > 0 && puzzle && (
           <>
-            <div className="replay-transport">
-              <button
-                className="btn sm"
-                onClick={() => (playing ? pause() : play())}
-                disabled={!moves.length}
-              >
-                {playing ? "Pause" : "Play"}
-              </button>
-              <button className="btn sm" onClick={() => applyTo(0)} disabled={!moves.length}>
-                Reset
-              </button>
-              <label className="row muted realtime-toggle">
-                <input
-                  type="checkbox"
-                  checked={realtime}
-                  onChange={(e) => { setRealtime(e.target.checked); realtimeRef.current = e.target.checked; }}
-                />
-                Real time
-              </label>
-            </div>
+            <div className="scrubber-row">
+              <div className="transport-btns">
+                <button
+                  className="btn icon-btn"
+                  onClick={() => applyTo(0)}
+                  disabled={!moves.length}
+                  aria-label="Reset"
+                  title="Reset"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 3v8M5 7l5-4v8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <button
+                  className="btn icon-btn"
+                  onClick={() => (playing ? pause() : play())}
+                  disabled={!moves.length}
+                  aria-label={playing ? "Pause" : "Play"}
+                  title={playing ? "Pause" : "Play"}
+                >
+                  {playing ? (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M4 2v10M10 2v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 2l9 5-9 5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  )}
+                </button>
+              </div>
             <div
               className="scrubber"
               onMouseDown={(e) => {
@@ -1746,6 +1751,15 @@ function Replay(props: {
                   style={{ left: `${moves.length ? (replayElapsed / (moves[moves.length - 1].atMs || 1)) * 100 : 0}%` }}
                 />
               </div>
+            </div>
+              <label className="realtime-toggle muted">
+                <input
+                  type="checkbox"
+                  checked={realtime}
+                  onChange={(e) => { setRealtime(e.target.checked); realtimeRef.current = e.target.checked; }}
+                />
+                1x
+              </label>
             </div>
             <div className="timeline" ref={timelineRef}>
               {moves.map((m, i) => {
