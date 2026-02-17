@@ -274,26 +274,28 @@ export default function App() {
           <h1>nonogram</h1>
           <div className="tag">friends-only puzzle room</div>
         </div>
-        <div className="row">
-          <button
-            className="btn icon-btn"
-            onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
-            aria-label="Toggle theme"
-            title="Toggle theme"
-          >
-            {theme === "light" ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          <button
-            className="btn icon-btn"
-            onClick={() => setHelpOpen(true)}
-            aria-label="Help"
-            title="Help"
-          >
-            <CircleHelp size={18} />
-          </button>
-          {!online && <div className="pill pill-muted">offline</div>}
+        <div className="topbar-right">
+          <div className="topbar-icons">
+            <button
+              className="btn icon-btn"
+              onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
+              aria-label="Toggle theme"
+              title="Toggle theme"
+            >
+              {theme === "light" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              className="btn icon-btn"
+              onClick={() => setHelpOpen(true)}
+              aria-label="Help"
+              title="Help"
+            >
+              <CircleHelp size={18} />
+            </button>
+            {!online && <div className="pill pill-muted">offline</div>}
+          </div>
           {user && (
-            <>
+            <div className="topbar-nav">
               <button className="btn sm" onClick={() => nav("/my-games")}>
                 my games
               </button>
@@ -331,7 +333,7 @@ export default function App() {
                   </button>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

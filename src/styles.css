@@ -103,6 +103,14 @@ a {
   letter-spacing: 0.3px;
 }
 
+.topbar-right,
+.topbar-icons,
+.topbar-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -331,13 +339,25 @@ a {
   }
 
   .topbar {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto 1fr;
     gap: 6px;
+    align-items: center;
   }
 
-  .topbar > .row {
-    width: 100%;
-    justify-content: flex-end;
+  .topbar-right {
+    display: contents;
+  }
+
+  .topbar-nav {
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .topbar-icons {
+    grid-row: 2;
+    grid-column: 1 / -1;
   }
 }
 
