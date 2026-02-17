@@ -1740,11 +1740,11 @@ function MyGames(props: { onToast: (t: Toast | null) => void }) {
                   )}
                   {g.status === "completed" && (
                     <>
-                      <button className="btn sm" onClick={() => nav(`/replay/${g.attemptId}`)}>
-                        watch replay
-                      </button>
                       <button className="btn sm" onClick={() => void newGame(g.puzzleId)}>
                         play again
+                      </button>
+                      <button className="btn sm" onClick={() => nav(`/replay/${g.attemptId}`)}>
+                        watch replay
                       </button>
                       {g.kdePath && (
                         <svg className="mini-kde" viewBox="0 0 100 28" preserveAspectRatio="none"><path d={g.kdePath} /></svg>
