@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
-import type { CellState, Puzzle } from "./types";
+import type { CellState, Puzzle, Toast } from "./types";
 
 function fmtTime(ms: number): string {
   const s = Math.floor(ms / 1000);
@@ -50,7 +50,7 @@ export default function NonogramPlayer(props: {
   startedAt?: string | null;
   readonly?: boolean;
   offline?: boolean;
-  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+  onToast: (t: Toast | null) => void;
   onSolved?: () => void;
 }) {
   const { puzzle } = props;
@@ -73,6 +73,7 @@ export default function NonogramPlayer(props: {
   const lastTouchIdx = useRef(-1);
   const finishing = useRef(false);
   const autoFinishRetries = useRef(0);
+  const ineligibleNoticeShownFor = useRef<string | null>(null);
 
   useEffect(() => {
     setState(props.initialState);
@@ -96,6 +97,17 @@ export default function NonogramPlayer(props: {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [props.startedAt, props.readonly, solved]);
+
+  // Show replay-viewed eligibility warning as a temporary top-of-screen toast.
+  useEffect(() => {
+    if (props.readonly || props.offline || props.eligible) return;
+    if (ineligibleNoticeShownFor.current === props.attemptId) return;
+    ineligibleNoticeShownFor.current = props.attemptId;
+    props.onToast({
+      kind: "info",
+      msg: "You've watched a replay of this puzzle, so your time won't appear on the leaderboard.",
+    });
+  }, [props.attemptId, props.eligible, props.readonly, props.offline, props.onToast]);
 
   // Global mouseup ends drag
   useEffect(() => {
@@ -412,12 +424,6 @@ export default function NonogramPlayer(props: {
       {!props.readonly && (
         <div className="game-status">
           {saving ? "saving..." : solved ? "solved!" : "\u00A0"}
-        </div>
-      )}
-
-      {!props.eligible && !props.readonly && !props.offline && (
-        <div className="hint" style={{ marginBottom: 8 }}>
-          You've watched a replay of this puzzle, so your time won't appear on the leaderboard.
         </div>
       )}
 

@@ -1,4 +1,5 @@
 export type User = { id: string; username: string; isAdmin: boolean };
+export type Toast = { kind: "ok" | "bad" | "info"; msg: string };
 
 export type Puzzle = {
   id: string;

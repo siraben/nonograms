@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Attempt, CellState, LeaderboardEntry, Puzzle, ReplayMove, User } from "./types";
+import type { Attempt, CellState, LeaderboardEntry, Puzzle, ReplayMove, Toast, User } from "./types";
 import { api } from "./api";
 import { computeKdePath } from "../lib/kde";
 import * as Auth from "./auth";
@@ -193,7 +193,7 @@ export default function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute());
   const [user, setUser] = useState<User | null>(null);
   const [busy, setBusy] = useState(true);
-  const [toast, setToast] = useState<{ kind: "ok" | "bad"; msg: string } | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [changePwOpen, setChangePwOpen] = useState(false);
   const online = useOnline();
@@ -205,7 +205,7 @@ export default function App() {
 
   useEffect(() => {
     if (!toast) return;
-    const ms = toast.kind === "ok" ? 3000 : 5000;
+    const ms = toast.kind === "bad" ? 5000 : 3000;
     const id = setTimeout(() => setToast(null), ms);
     return () => clearTimeout(id);
   }, [toast]);
@@ -437,7 +437,7 @@ export default function App() {
 
 function ChangePasswordModal(props: {
   onClose: () => void;
-  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+  onToast: (t: Toast | null) => void;
 }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -540,7 +540,7 @@ function PrivacyPolicy() {
 function AuthCard(props: {
   mode: "login" | "register";
   onAuthed: () => void;
-  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+  onToast: (t: Toast | null) => void;
 }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -801,7 +801,7 @@ function PublicLeaderboard() {
 type Period = "day" | "week" | "month" | "all";
 const PERIOD_LABELS: Record<Period, string> = { day: "Daily", week: "Weekly", month: "Monthly", all: "All time" };
 
-function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
+function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
   const [leader5, setLeader5] = useState<LeaderboardEntry[]>([]);
   const [leader10, setLeader10] = useState<LeaderboardEntry[]>([]);
   const [leader15, setLeader15] = useState<LeaderboardEntry[]>([]);
@@ -1010,7 +1010,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
 
 function OfflinePlay(props: {
   size: number;
-  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+  onToast: (t: Toast | null) => void;
 }) {
   const [key, setKey] = useState(0);
   const puzzle = useMemo(() => {
@@ -1055,7 +1055,7 @@ function OfflinePlay(props: {
 
 function Play(props: {
   attemptId: string;
-  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+  onToast: (t: Toast | null) => void;
   currentUser?: string;
 }) {
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
@@ -1206,7 +1206,7 @@ function ScrubberKDE(props: { moves: ReplayMove[] }) {
 
 function Replay(props: {
   attemptId: string;
-  onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
+  onToast: (t: Toast | null) => void;
   skipConfirm?: boolean;
   autoPlay?: boolean;
   finishedSize?: number;
@@ -1615,7 +1615,7 @@ type GameEntry = {
   kdePath?: string;
 };
 
-function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
+function MyGames(props: { onToast: (t: Toast | null) => void }) {
   const [games, setGames] = useState<GameEntry[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -1741,7 +1741,7 @@ type InviteCode = {
   disabled: boolean;
 };
 
-function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
+function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [invites, setInvites] = useState<InviteCode[]>([]);
   const [loading, setLoading] = useState(true);
