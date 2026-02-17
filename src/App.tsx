@@ -196,6 +196,8 @@ export default function App() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [changePwOpen, setChangePwOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
   const online = useOnline();
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("nonogram-theme");
@@ -214,6 +216,17 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("nonogram-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [accountOpen]);
 
   useEffect(() => {
     const onHash = () => setRoute(parseRoute());
@@ -289,8 +302,14 @@ export default function App() {
                   admin
                 </button>
               )}
-              <div className="account-menu">
-                <button type="button" className="pill account-trigger" aria-haspopup="menu">
+              <div className={`account-menu${accountOpen ? " open" : ""}`} ref={accountRef}>
+                <button
+                  type="button"
+                  className="pill account-trigger"
+                  aria-haspopup="menu"
+                  aria-expanded={accountOpen}
+                  onClick={() => setAccountOpen((v) => !v)}
+                >
                   {user.username}
                 </button>
                 <div className="account-dropdown" role="menu" aria-label="Account menu">
@@ -298,7 +317,7 @@ export default function App() {
                     type="button"
                     className="btn sm account-item"
                     role="menuitem"
-                    onClick={() => setChangePwOpen(true)}
+                    onClick={() => { setAccountOpen(false); setChangePwOpen(true); }}
                   >
                     Change password
                   </button>
@@ -306,7 +325,7 @@ export default function App() {
                     type="button"
                     className="btn sm account-item danger"
                     role="menuitem"
-                    onClick={doLogout}
+                    onClick={() => { setAccountOpen(false); doLogout(); }}
                   >
                     Log out
                   </button>

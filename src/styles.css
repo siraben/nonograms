@@ -895,8 +895,17 @@ a {
   z-index: 40;
 }
 
+.account-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  height: 6px;
+}
+
 .account-menu:hover .account-dropdown,
-.account-menu:focus-within .account-dropdown {
+.account-menu.open .account-dropdown {
   display: grid;
 }
 
