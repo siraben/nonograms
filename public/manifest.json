@@ -1,6 +1,6 @@
 {
-  "name": "Nonogram",
-  "short_name": "Nonogram",
+  "name": "Nonograms",
+  "short_name": "Nonograms",
   "description": "Friends-only nonogram puzzle room",
   "start_url": "/",
   "display": "standalone",

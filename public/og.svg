@@ -22,9 +22,10 @@
     <rect class="panel" x="0" y="0" width="1060" height="470" rx="36"/>
 
     <g transform="translate(60 70)">
-      <text class="title ink" x="0" y="0" dominant-baseline="hanging">nonogram</text>
+      <text class="title ink" x="0" y="0" dominant-baseline="hanging">nonograms</text>
       <text class="sub muted" x="0" y="108" dominant-baseline="hanging">friends-only puzzle room</text>
-      <text class="mono muted" x="0" y="170" dominant-baseline="hanging">5x5 + 10x10 • replays • leaderboards</text>
+      <text class="mono muted" x="0" y="170" dominant-baseline="hanging">5x5 · 10x10 · 15x15 · 20x20</text>
+      <text class="mono muted" x="0" y="210" dominant-baseline="hanging">replays · leaderboards</text>
     </g>
 
     <!-- 4x4 grid-aligned mini board -->

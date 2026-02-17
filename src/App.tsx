@@ -271,7 +271,7 @@ export default function App() {
     <div className="shell">
       <div className="topbar">
         <div className="brand" onClick={() => nav("/")}>
-          <h1>nonogram</h1>
+          <h1>nonograms</h1>
           <div className="tag">friends-only puzzle room</div>
         </div>
         <div className="topbar-right">

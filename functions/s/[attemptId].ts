@@ -37,8 +37,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>${title} — Nonogram</title>
-<meta property="og:site_name" content="Nonogram" />
+<title>${title} — Nonograms</title>
+<meta property="og:site_name" content="Nonograms" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="${title}" />
 <meta property="og:description" content="${desc}" />
