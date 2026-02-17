@@ -647,12 +647,13 @@ a {
   position: absolute;
   top: 50%;
   width: 14px;
-  height: 14px;
+  aspect-ratio: 1;
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid var(--panel);
   box-shadow: var(--shadow);
   transform: translate(-50%, -50%);
+  will-change: left;
   z-index: 2;
 }
 
