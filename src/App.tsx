@@ -1808,6 +1808,7 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hideAbandoned, setHideAbandoned] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -1874,13 +1875,21 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
             </div>
           )}
         </div>
+        <label className="row muted realtime-toggle" style={{ marginBottom: 8 }}>
+          <input
+            type="checkbox"
+            checked={hideAbandoned}
+            onChange={(e) => setHideAbandoned(e.target.checked)}
+          />
+          Hide abandoned
+        </label>
         {loading ? (
           <div className="muted">Loading...</div>
         ) : games.length === 0 ? (
           <div className="muted">No games yet. Start one from the home page!</div>
         ) : (
           <div className="list">
-            {games.map((g) => (
+            {games.filter((g) => !hideAbandoned || g.status !== "abandoned").map((g) => (
               <div key={g.attemptId} className="item">
                 <div className="title">
                   {g.width}x{g.height}
