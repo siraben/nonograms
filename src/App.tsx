@@ -480,7 +480,7 @@ export default function App() {
                 <li>Timer starts when you click Start</li>
                 <li>Puzzle auto-submits when solved correctly</li>
                 <li>Leaderboard is per puzzle size</li>
-                <li>Watching a replay means your times won't count for that puzzle's leaderboard</li>
+                <li>Only new games count towards the leaderboard</li>
               </ul>
             </div>
           </div>
@@ -1029,7 +1029,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             <strong>Offline mode</strong> — puzzles generated locally, no leaderboard.
           </div>
         )}
-        <div className="btn-group">
+        <div className="size-grid">
           <button
             className="btn primary lg"
             onClick={() => props.online ? void newGame(undefined, 5) : nav("/offline/5")}
@@ -1057,7 +1057,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
         </div>
         {props.online && (
           <div className="hint gap-above">
-            Watching a replay means your times won't count for that puzzle's leaderboard.
+            Only new games count towards the leaderboard.
           </div>
         )}
       </div>

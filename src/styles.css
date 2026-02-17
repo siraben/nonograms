@@ -779,6 +779,14 @@ a {
   flex-wrap: wrap;
 }
 
+.size-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
 .card-header-row {
   display: flex;
   justify-content: space-between;
