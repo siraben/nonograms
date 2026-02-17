@@ -1800,6 +1800,7 @@ type GameEntry = {
   durationMs: number | null;
   createdAt: string;
   finishedAt: string | null;
+  kdePath?: string;
 };
 
 function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void }) {
@@ -1916,6 +1917,9 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
                       <button className="btn sm" onClick={() => void newGame(g.puzzleId)}>
                         play again
                       </button>
+                      {g.kdePath && (
+                        <svg className="mini-kde" viewBox="0 0 100 28" preserveAspectRatio="none"><path d={g.kdePath} /></svg>
+                      )}
                     </>
                   )}
                 </div>
