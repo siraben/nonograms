@@ -37,7 +37,7 @@ function parseRoute(): Route {
   if (parts[0] === "my-games") return { name: "my-games" };
   if (parts[0] === "offline" && parts[1]) {
     const size = parseInt(parts[1], 10);
-    if (size === 5 || size === 10 || size === 15) return { name: "offline-play", size };
+    if (size === 5 || size === 10 || size === 15 || size === 20) return { name: "offline-play", size };
   }
   return { name: "home" };
 }
@@ -839,6 +839,9 @@ function AuthCard(props: {
           <button type="button" className="btn sm" onClick={() => nav("/offline/15")}>
             15x15
           </button>
+          <button type="button" className="btn sm" onClick={() => nav("/offline/20")}>
+            20x20
+          </button>
         </div>
       </div>
     </div>
@@ -851,17 +854,19 @@ function PublicLeaderboard() {
   const [entries5, setEntries5] = useState<PublicEntry[]>([]);
   const [entries10, setEntries10] = useState<PublicEntry[]>([]);
   const [entries15, setEntries15] = useState<PublicEntry[]>([]);
+  const [entries20, setEntries20] = useState<PublicEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [signupPrompt, setSignupPrompt] = useState(false);
-  const [tab, setTab] = useState<"5" | "10" | "15">("5");
+  const [tab, setTab] = useState<"5" | "10" | "15" | "20">("5");
 
   useEffect(() => {
     (async () => {
       try {
-        const r = await api<{ leaderboard5: PublicEntry[]; leaderboard10: PublicEntry[]; leaderboard15: PublicEntry[] }>("/api/leaderboard/public?period=day");
+        const r = await api<{ leaderboard5: PublicEntry[]; leaderboard10: PublicEntry[]; leaderboard15: PublicEntry[]; leaderboard20: PublicEntry[] }>("/api/leaderboard/public?period=day");
         setEntries5(r.leaderboard5);
         setEntries10(r.leaderboard10);
         setEntries15(r.leaderboard15);
+        setEntries20(r.leaderboard20);
       } catch {
         // ignore
       } finally {
@@ -871,8 +876,8 @@ function PublicLeaderboard() {
   }, []);
 
   const medal = (i: number) => i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : "\u{1F949}";
-  const entries = tab === "5" ? entries5 : tab === "10" ? entries10 : entries15;
-  const label = tab === "5" ? "5x5" : tab === "10" ? "10x10" : "15x15";
+  const entries = tab === "5" ? entries5 : tab === "10" ? entries10 : tab === "15" ? entries15 : entries20;
+  const label = tab === "5" ? "5x5" : tab === "10" ? "10x10" : tab === "15" ? "15x15" : "20x20";
 
   return (
     <>
@@ -883,6 +888,7 @@ function PublicLeaderboard() {
             <button className={`btn sm${tab === "5" ? " primary" : ""}`} onClick={() => setTab("5")}>5x5</button>
             <button className={`btn sm${tab === "10" ? " primary" : ""}`} onClick={() => setTab("10")}>10x10</button>
             <button className={`btn sm${tab === "15" ? " primary" : ""}`} onClick={() => setTab("15")}>15x15</button>
+            <button className={`btn sm${tab === "20" ? " primary" : ""}`} onClick={() => setTab("20")}>20x20</button>
           </div>
         </div>
         {loading ? (
@@ -947,11 +953,13 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
   const [leader5, setLeader5] = useState<LeaderboardEntry[]>([]);
   const [leader10, setLeader10] = useState<LeaderboardEntry[]>([]);
   const [leader15, setLeader15] = useState<LeaderboardEntry[]>([]);
+  const [leader20, setLeader20] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>("all");
   const [page5, setPage5] = useState(0);
   const [page10, setPage10] = useState(0);
   const [page15, setPage15] = useState(0);
+  const [page20, setPage20] = useState(0);
   const PAGE_SIZE = 10;
 
   useEffect(() => {
@@ -959,10 +967,11 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
     setLoading(true);
     const es = new EventSource(`/api/leaderboard/stream?period=${period}`);
     es.onmessage = (e) => {
-      const data = JSON.parse(e.data) as { leaderboard5: LeaderboardEntry[]; leaderboard10: LeaderboardEntry[]; leaderboard15: LeaderboardEntry[] };
+      const data = JSON.parse(e.data) as { leaderboard5: LeaderboardEntry[]; leaderboard10: LeaderboardEntry[]; leaderboard15: LeaderboardEntry[]; leaderboard20: LeaderboardEntry[] };
       setLeader5(data.leaderboard5);
       setLeader10(data.leaderboard10);
       setLeader15(data.leaderboard15);
+      setLeader20(data.leaderboard20);
       setLoading(false);
     };
     es.onerror = () => {
@@ -1014,6 +1023,12 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
           >
             15x15
           </button>
+          <button
+            className="btn primary lg"
+            onClick={() => props.online ? void newGame(undefined, 20) : nav("/offline/20")}
+          >
+            20x20
+          </button>
         </div>
         {props.online && (
           <div className="hint gap-above">
@@ -1029,14 +1044,14 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             <button
               key={p}
               className={`btn sm${period === p ? " primary" : ""}`}
-              onClick={() => { setPeriod(p); setPage5(0); setPage10(0); setPage15(0); }}
+              onClick={() => { setPeriod(p); setPage5(0); setPage10(0); setPage15(0); setPage20(0); }}
             >
               {PERIOD_LABELS[p]}
             </button>
           ))}
         </div>
         <div className="leaderboard-cols">
-          {([["5x5", leader5, page5, setPage5], ["10x10", leader10, page10, setPage10], ["15x15", leader15, page15, setPage15]] as [string, LeaderboardEntry[], number, (n: number) => void][]).map(([label, entries, page, setPage]) => {
+          {([["5x5", leader5, page5, setPage5], ["10x10", leader10, page10, setPage10], ["15x15", leader15, page15, setPage15], ["20x20", leader20, page20, setPage20]] as [string, LeaderboardEntry[], number, (n: number) => void][]).map(([label, entries, page, setPage]) => {
             const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
             const pageEntries = entries.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
             const rankOffset = page * PAGE_SIZE;

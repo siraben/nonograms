@@ -6,7 +6,7 @@ import { randomU32 } from "../../lib/rng";
 
 type Body = { puzzleId?: string; size?: number };
 
-const ALLOWED_SIZES = [5, 10, 15] as const;
+const ALLOWED_SIZES = [5, 10, 15, 20] as const;
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const authed = await requireUser(env, request);
