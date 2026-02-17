@@ -1916,6 +1916,7 @@ type AdminStats = {
   activeSessions: number;
   recentSignups: { id: string; username: string; createdAt: string }[];
   recentCompletions: { attemptId: string; username: string; durationMs: number; finishedAt: string; width: number; height: number }[];
+  inProgressAttempts: { attemptId: string; username: string; startedAt: string; width: number; height: number }[];
 };
 
 type InviteCode = {
@@ -2037,6 +2038,25 @@ function AdminDashboard(props: { onToast: (t: { kind: "ok" | "bad"; msg: string 
           </div>
         ) : null}
       </div>
+
+      {stats && stats.inProgressAttempts.length > 0 && (
+        <div className="card">
+          <h2>In Progress</h2>
+          <div className="list">
+            {stats.inProgressAttempts.map((a) => (
+              <div key={a.attemptId} className="item">
+                <div className="title">
+                  {a.username}
+                  <span className="muted" style={{ marginLeft: 8 }}>
+                    {a.width}x{a.height}
+                  </span>
+                </div>
+                <div className="meta">started {fmtTime(a.startedAt)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {stats && (
         <>

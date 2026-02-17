@@ -17,6 +17,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
     activeSessionsCount,
     recentSignups,
     recentCompletions,
+    inProgressAttempts,
   ] = await Promise.all([
     env.DB.prepare("SELECT COUNT(*) as c FROM users").first<{ c: number }>(),
     env.DB.prepare("SELECT COUNT(*) as c FROM puzzles").first<{ c: number }>(),
@@ -36,6 +37,16 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
        ORDER BY a.finished_at DESC
        LIMIT 20`
     ).all<{ attemptId: string; username: string; durationMs: number; finishedAt: string; width: number; height: number }>(),
+    env.DB.prepare(
+      `SELECT a.id as attemptId, u.username, a.started_at as startedAt,
+              p.width, p.height
+       FROM attempts a
+       JOIN users u ON u.id = a.user_id
+       JOIN puzzles p ON p.id = a.puzzle_id
+       WHERE a.started_at IS NOT NULL AND a.completed = 0
+       ORDER BY a.started_at DESC
+       LIMIT 20`
+    ).all<{ attemptId: string; username: string; startedAt: string; width: number; height: number }>(),
   ]);
 
   return json({
@@ -46,5 +57,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
     activeSessions: activeSessionsCount?.c ?? 0,
     recentSignups: recentSignups.results,
     recentCompletions: recentCompletions.results,
+    inProgressAttempts: inProgressAttempts.results,
   });
 };
