@@ -1808,7 +1808,7 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [hideAbandoned, setHideAbandoned] = useState(false);
+  const [hideAbandoned, setHideAbandoned] = useState(true);
 
   useEffect(() => {
     setLoading(true);
