@@ -892,7 +892,7 @@ function PublicLeaderboard() {
         {loading ? (
           <div className="muted">Loading...</div>
         ) : entries.length === 0 ? (
-          <div className="muted">No runs yet</div>
+          <div className="muted" style={{ textAlign: "center" }}>Sign up to be the first!</div>
         ) : (
           <div className="list">
             {entries.map((e, i) => (
