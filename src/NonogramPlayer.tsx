@@ -441,7 +441,7 @@ export default function NonogramPlayer(props: {
     }
 
     const track = `repeat(${cols}, minmax(var(--cell-min, 18px), var(--cell-size, 28px)))`;
-    return { gridTemplateColumns: track, gridTemplateRows: `repeat(${rows}, minmax(var(--cell-min, 18px), var(--cell-size, 28px)))`, cells: items };
+    return { gridTemplateColumns: track, gridTemplateRows: `repeat(${rows}, minmax(var(--cell-min, 18px), var(--cell-size, 28px)))`, cells: items, colDepth, rows };
   }, [puzzle, state]);
 
   return (
@@ -460,7 +460,7 @@ export default function NonogramPlayer(props: {
         </div>
       )}
 
-      <div className="nonogram-fade" ref={fadeRef}>
+      <div className="nonogram-fade" ref={fadeRef} style={{ "--fade-top": `${(colDepth / rows) * 100}%` } as React.CSSProperties}>
         <div className="nonogram-wrap" ref={wrapRef}>
           <div
             ref={gridRef}
