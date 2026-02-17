@@ -8,6 +8,7 @@ import { getTurnstile } from "./turnstile";
 import { useOnline } from "./useOnline";
 import { genPuzzle } from "../functions/lib/puzzle";
 import { randomU32 } from "../functions/lib/rng";
+import { Sun, Moon, CircleHelp, Share, LogOut, ChevronLeft, ChevronRight, SkipBack, Play as PlayIcon, Pause } from "lucide-react";
 
 type Route =
   | { name: "login" }
@@ -45,114 +46,6 @@ function parseRoute(): Route {
 
 function nav(to: string) {
   location.hash = to;
-}
-
-function SunIcon(props: { title?: string }) {
-  return (
-    <svg
-      aria-hidden={props.title ? undefined : true}
-      role={props.title ? "img" : "presentation"}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      {props.title ? <title>{props.title}</title> : null}
-      <path
-        d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-      <path
-        d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function MoonIcon(props: { title?: string }) {
-  return (
-    <svg
-      aria-hidden={props.title ? undefined : true}
-      role={props.title ? "img" : "presentation"}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      {props.title ? <title>{props.title}</title> : null}
-      <path
-        d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-// Based on Lucide "circle-help" (ISC license): https://lucide.dev/icons/circle-help
-function HelpIcon(props: { title?: string }) {
-  return (
-    <svg
-      aria-hidden={props.title ? undefined : true}
-      role={props.title ? "img" : "presentation"}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      {props.title ? <title>{props.title}</title> : null}
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M12 17h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// Based on Lucide "share" (ISC license): https://lucide.dev/icons/share
-function ShareIcon(props: { title?: string }) {
-  return (
-    <svg
-      aria-hidden={props.title ? undefined : true}
-      role={props.title ? "img" : "presentation"}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      {props.title ? <title>{props.title}</title> : null}
-      <path
-        d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <polyline
-        points="16 6 12 2 8 6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <line
-        x1="12" y1="2" x2="12" y2="15"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
 }
 
 const S = 24; // help diagram cell size
@@ -374,7 +267,7 @@ export default function App() {
             aria-label="Toggle theme"
             title="Toggle theme"
           >
-            {theme === "light" ? <SunIcon /> : <MoonIcon />}
+            {theme === "light" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <button
             className="btn icon-btn"
@@ -382,7 +275,7 @@ export default function App() {
             aria-label="Help"
             title="Help"
           >
-            <HelpIcon />
+            <CircleHelp size={18} />
           </button>
           {!online && <div className="pill pill-muted">offline</div>}
           {user && (
@@ -397,7 +290,7 @@ export default function App() {
               )}
               <div className="pill pill-clickable" onClick={() => setChangePwOpen(true)}>{user.username}</div>
               <button className="btn danger icon-btn" onClick={doLogout} aria-label="Log out" title="Log out">
-                <svg width="18" height="18" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 1H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h2M9 10l3-3-3-3M12 7H5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
+<LogOut size={18} />
               </button>
             </>
           )}
@@ -1081,7 +974,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             onClick={() => { const el = leaderColsRef.current; if (el) el.scrollBy({ left: -el.clientWidth, behavior: "smooth" }); }}
             aria-label="Scroll leaderboard left"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <ChevronLeft size={14} />
           </button>
           <span className="muted">Leaderboards</span>
           <button
@@ -1089,7 +982,7 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
             onClick={() => { const el = leaderColsRef.current; if (el) el.scrollBy({ left: el.clientWidth, behavior: "smooth" }); }}
             aria-label="Scroll leaderboard right"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <ChevronRight size={14} />
           </button>
         </div>
         <div className="leaderboard-wrap" ref={leaderWrapRef}>
@@ -1105,11 +998,11 @@ function Home(props: { online: boolean; onToast: (t: { kind: "ok" | "bad"; msg: 
                 {entries.length > PAGE_SIZE && (
                   <div className="pagination">
                     <button className="btn sm icon-btn" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Previous page">
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <ChevronLeft size={14} />
                     </button>
                     <span className="pagination-info">{page + 1}/{totalPages}</span>
                     <button className="btn sm icon-btn" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} aria-label="Next page">
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <ChevronRight size={14} />
                     </button>
                   </div>
                 )}
@@ -1175,7 +1068,7 @@ function OfflinePlay(props: {
   const puzzle = useMemo(() => {
     const seed = randomU32();
     const p = genPuzzle(props.size, props.size, seed);
-    return { width: p.width, height: p.height, rowClues: p.rowClues, colClues: p.colClues };
+    return { id: `offline-${seed}`, title: "", width: p.width, height: p.height, rowClues: p.rowClues, colClues: p.colClues };
   }, [props.size, key]);
 
   const initialState = useMemo(
@@ -1634,7 +1527,7 @@ function Replay(props: {
               aria-label="Share replay"
               title="Share replay"
             >
-              <ShareIcon />
+              <Share size={18} />
             </button>
             {props.finishedSize && (
               <button className="btn primary sm" onClick={startNewGame}>
@@ -1670,7 +1563,7 @@ function Replay(props: {
                   aria-label="Reset"
                   title="Reset"
                 >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 3v8M5 7l5-4v8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <SkipBack size={14} />
                 </button>
                 <button
                   className="btn icon-btn"
@@ -1680,9 +1573,9 @@ function Replay(props: {
                   title={playing ? "Pause" : "Play"}
                 >
                   {playing ? (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M4 2v10M10 2v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    <Pause size={14} />
                   ) : (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 2l9 5-9 5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <PlayIcon size={14} />
                   )}
                 </button>
               </div>
@@ -1861,7 +1754,7 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
                 onClick={() => setPage(page - 1)}
                 aria-label="Previous page"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <ChevronLeft size={14} />
               </button>
               <span className="pagination-info">{page + 1}</span>
               <button
@@ -1870,7 +1763,7 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
                 onClick={() => setPage(page + 1)}
                 aria-label="Next page"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <ChevronRight size={14} />
               </button>
             </div>
           )}
