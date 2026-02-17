@@ -924,7 +924,12 @@ a {
   height: 6px;
 }
 
-.account-menu:hover .account-dropdown,
+@media (hover: hover) {
+  .account-menu:hover .account-dropdown {
+    display: grid;
+  }
+}
+
 .account-menu.open .account-dropdown {
   display: grid;
 }
