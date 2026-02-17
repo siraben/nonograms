@@ -882,14 +882,12 @@ function PublicLeaderboard() {
   return (
     <>
       <div className="card">
-        <div className="card-header-row">
-          <h2>Today's {label}</h2>
-          <div className="row">
-            <button className={`btn sm${tab === "5" ? " primary" : ""}`} onClick={() => setTab("5")}>5x5</button>
-            <button className={`btn sm${tab === "10" ? " primary" : ""}`} onClick={() => setTab("10")}>10x10</button>
-            <button className={`btn sm${tab === "15" ? " primary" : ""}`} onClick={() => setTab("15")}>15x15</button>
-            <button className={`btn sm${tab === "20" ? " primary" : ""}`} onClick={() => setTab("20")}>20x20</button>
-          </div>
+        <h2>Today's Leaderboard</h2>
+        <div className="btn-group" style={{ marginBottom: 8 }}>
+          <button className={`btn sm${tab === "5" ? " primary" : ""}`} onClick={() => setTab("5")}>5x5</button>
+          <button className={`btn sm${tab === "10" ? " primary" : ""}`} onClick={() => setTab("10")}>10x10</button>
+          <button className={`btn sm${tab === "15" ? " primary" : ""}`} onClick={() => setTab("15")}>15x15</button>
+          <button className={`btn sm${tab === "20" ? " primary" : ""}`} onClick={() => setTab("20")}>20x20</button>
         </div>
         {loading ? (
           <div className="muted">Loading...</div>
