@@ -1514,10 +1514,9 @@ function Replay(props: {
     setPlaying(true);
 
     const endMs = moves[moves.length - 1].atMs;
-    // Scale replay: cap total duration between 10s and 45s
+    // Scale replay: compress long replays to 45s max, never slower than real-time
     const span = endMs - moves[0].atMs;
-    const baseScale = span < 10000 ? 10000 / Math.max(span, 1) :
-                      span > 45000 ? 45000 / span : 1;
+    const baseScale = span > 45000 ? 45000 / span : 1;
 
     // If replay already finished, reset to beginning
     let simMs = replayElapsed;
