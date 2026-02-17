@@ -33,11 +33,11 @@ export function computeKdePath(
   for (let b = 0; b < bins; b++) if (density[b] > maxD) maxD = density[b];
   if (maxD === 0) return "";
 
-  // Polynomial damping at edges for smooth rise/fall (cubic ease-in)
-  const TAPER = Math.min(8, Math.floor(bins / 5));
+  // Smoothstep damping at edges (f'(1)=0, no visible kink at taper boundary)
+  const TAPER = Math.min(16, Math.floor(bins / 5));
   for (let i = 0; i < TAPER; i++) {
     const t = (i + 1) / (TAPER + 1);  // 0..1
-    const w = t * t * t;               // cubic ease-in
+    const w = t * t * (3 - 2 * t);    // smoothstep
     density[i] *= w;
     density[bins - 1 - i] *= w;
   }
