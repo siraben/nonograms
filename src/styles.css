@@ -223,6 +223,7 @@ a {
   padding: 0 10px;
   height: 32px;
   border-radius: 8px;
+  border: 1px solid var(--border);
   background: var(--accent-light);
   font-size: 13px;
   font-weight: 500;
@@ -855,9 +856,10 @@ a {
 
 .pill-clickable {
   cursor: pointer;
+  transition: border-color 0.15s;
 }
 .pill-clickable:hover {
-  filter: brightness(0.92);
+  border-color: var(--accent);
 }
 
 .pill-muted {
