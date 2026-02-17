@@ -423,7 +423,8 @@ a {
 
 .cell,
 .clue {
-  border: 1px solid var(--cell-border);
+  outline: 1px solid var(--cell-border);
+  outline-offset: -0.5px;
 }
 
 .clue {
@@ -457,11 +458,15 @@ a {
 }
 
 .rmaj {
-  border-bottom: 2px solid var(--cell-major);
+  box-shadow: inset 0 -2px 0 var(--cell-major);
 }
 
 .cmaj {
-  border-right: 2px solid var(--cell-major);
+  box-shadow: inset -2px 0 0 var(--cell-major);
+}
+
+.rmaj.cmaj {
+  box-shadow: inset -2px -2px 0 var(--cell-major);
 }
 
 .timer {
