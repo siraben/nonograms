@@ -407,7 +407,7 @@ a {
   margin: 0 auto;
 }
 
-.nonogram.interactive {
+.nonogram.interactive .cell {
   touch-action: none;
 }
 
