@@ -73,7 +73,6 @@ export default function NonogramPlayer(props: {
   const lastTouchIdx = useRef(-1);
   const finishing = useRef(false);
   const autoFinishRetries = useRef(0);
-  const ineligibleNoticeShownFor = useRef<string | null>(null);
 
   useEffect(() => {
     setState(props.initialState);
@@ -97,17 +96,6 @@ export default function NonogramPlayer(props: {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [props.startedAt, props.readonly, solved]);
-
-  // Show replay-viewed eligibility warning as a temporary top-of-screen toast.
-  useEffect(() => {
-    if (props.readonly || props.offline || props.eligible) return;
-    if (ineligibleNoticeShownFor.current === props.attemptId) return;
-    ineligibleNoticeShownFor.current = props.attemptId;
-    props.onToast({
-      kind: "info",
-      msg: "You've watched a replay of this puzzle, so your time won't appear on the leaderboard.",
-    });
-  }, [props.attemptId, props.eligible, props.readonly, props.offline, props.onToast]);
 
   // Global mouseup ends drag
   useEffect(() => {
@@ -419,6 +407,10 @@ export default function NonogramPlayer(props: {
     <div>
       {!props.readonly && (
         <div className="timer">{fmtTime(elapsed)}</div>
+      )}
+
+      {!props.readonly && !props.offline && !props.eligible && (
+        <div className="hint" style={{ textAlign: "center" }}>(not ranked)</div>
       )}
 
       {!props.readonly && (

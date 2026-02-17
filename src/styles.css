@@ -869,13 +869,14 @@ a {
 .account-trigger {
   cursor: default;
   user-select: none;
-  border-color: var(--accent);
+  border-color: var(--border);
 }
 
 .account-trigger::after {
-  content: "▾";
+  content: "▼";
   margin-left: 6px;
-  font-size: 10px;
+  font-size: 13px;
+  line-height: 1;
   color: var(--muted);
 }
 
