@@ -862,12 +862,63 @@ a {
   padding: 14px 36px;
 }
 
-.pill-clickable {
-  cursor: pointer;
-  transition: border-color 0.15s;
+.account-menu {
+  position: relative;
 }
-.pill-clickable:hover {
+
+.account-trigger {
+  cursor: default;
+  user-select: none;
   border-color: var(--accent);
+}
+
+.account-trigger::after {
+  content: "▾";
+  margin-left: 6px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.account-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 170px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+  display: none;
+  gap: 4px;
+  z-index: 40;
+}
+
+.account-menu:hover .account-dropdown,
+.account-menu:focus-within .account-dropdown {
+  display: grid;
+}
+
+.account-item {
+  width: 100%;
+  justify-content: flex-start;
+  border-color: transparent;
+  background: transparent;
+}
+
+.account-item:hover:not(:disabled) {
+  border-color: var(--border);
+  background: var(--accent-light);
+}
+
+.account-item.danger {
+  color: var(--danger);
+  border-color: transparent;
+}
+
+.account-item.danger:hover:not(:disabled) {
+  background: var(--danger-light);
+  border-color: transparent;
 }
 
 .pill-muted {

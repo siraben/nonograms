@@ -8,7 +8,7 @@ import { getTurnstile } from "./turnstile";
 import { useOnline } from "./useOnline";
 import { genPuzzle } from "../functions/lib/puzzle";
 import { randomU32 } from "../functions/lib/rng";
-import { Sun, Moon, CircleHelp, Share, LogOut, ChevronLeft, ChevronRight, SkipBack, Play as PlayIcon, Pause } from "lucide-react";
+import { Sun, Moon, CircleHelp, Share, ChevronLeft, ChevronRight, SkipBack, Play as PlayIcon, Pause } from "lucide-react";
 import { Modal, Pagination, BackButton, CardHeader } from "./ui";
 
 type Route =
@@ -289,10 +289,29 @@ export default function App() {
                   admin
                 </button>
               )}
-              <div className="pill pill-clickable" onClick={() => setChangePwOpen(true)}>{user.username}</div>
-              <button className="btn danger icon-btn" onClick={doLogout} aria-label="Log out" title="Log out">
-<LogOut size={18} />
-              </button>
+              <div className="account-menu">
+                <button type="button" className="pill account-trigger" aria-haspopup="menu">
+                  {user.username}
+                </button>
+                <div className="account-dropdown" role="menu" aria-label="Account menu">
+                  <button
+                    type="button"
+                    className="btn sm account-item"
+                    role="menuitem"
+                    onClick={() => setChangePwOpen(true)}
+                  >
+                    Change password
+                  </button>
+                  <button
+                    type="button"
+                    className="btn sm account-item danger"
+                    role="menuitem"
+                    onClick={doLogout}
+                  >
+                    Log out
+                  </button>
+                </div>
+              </div>
             </>
           )}
         </div>
