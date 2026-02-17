@@ -23,16 +23,19 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   if (body.moves.length > MAX_BATCH) return err(400, "too many moves");
 
   const row = await env.DB.prepare(
-    "SELECT a.id, a.started_at as startedAt, a.completed as completed, json_array_length(a.current_state_json) as stateLen FROM attempts a WHERE a.id = ? AND a.user_id = ?"
+    `SELECT a.id, a.started_at as startedAt, a.completed as completed,
+            p.width * p.height as gridSize
+     FROM attempts a JOIN puzzles p ON p.id = a.puzzle_id
+     WHERE a.id = ? AND a.user_id = ?`
   )
     .bind(attemptId, authed.userId)
-    .first<{ id: string; startedAt: string | null; completed: number; stateLen: number }>();
+    .first<{ id: string; startedAt: string | null; completed: number; gridSize: number }>();
   if (!row) return err(404, "attempt not found");
   if (row.completed === 1) return err(409, "attempt finished");
   if (!row.startedAt) return err(409, "attempt not started");
 
-  const n = row.stateLen | 0;
-  if (n <= 0) return err(500, "bad stored state");
+  const n = row.gridSize | 0;
+  if (n <= 0) return err(500, "bad grid size");
 
   // Validate all moves before writing any
   for (const m of body.moves) {
@@ -44,7 +47,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
 
   const now = new Date().toISOString();
 
-  // Sort moves by atMs so seq numbers and json_set calls reflect chronological order.
+  // Sort moves by atMs so seq numbers reflect chronological order.
   const sorted = body.moves
     .map((m) => ({ idx: m.idx | 0, state: m.state | 0, atMs: Math.max(0, m.atMs | 0) }))
     .sort((a, b) => a.atMs - b.atMs);
@@ -55,11 +58,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   ).bind(attemptId).first<{ maxSeq: number }>();
   let seq = seqRow?.maxSeq ?? 0;
 
-  // For current_state_json, only apply the last state per cell (highest atMs).
-  const finalState = new Map<number, number>();
-  for (const m of sorted) finalState.set(m.idx, m.state);
-
-  // Build batch: inserts for all moves (history), then one json_set per unique cell
+  // Build batch: one insert per move (history only, state materialized on read)
   const stmts: D1PreparedStatement[] = [];
   for (const m of sorted) {
     seq++;
@@ -67,13 +66,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
       env.DB.prepare(
         "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, ?, ?, ?, ?, ?)"
       ).bind(attemptId, seq, m.atMs, m.idx, m.state, now)
-    );
-  }
-  for (const [idx, st] of finalState) {
-    stmts.push(
-      env.DB.prepare(
-        "UPDATE attempts SET current_state_json = json_set(current_state_json, ?, ?) WHERE id = ?"
-      ).bind(`$[${idx}]`, st, attemptId)
     );
   }
 

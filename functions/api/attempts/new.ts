@@ -56,24 +56,23 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   }
 
   const attemptId = crypto.randomUUID();
-  const state = Array.from({ length: width * height }, () => 0);
   // Compute eligibility atomically via subquery to avoid TOCTTOU race with concurrent replay views.
   await env.DB.prepare(
-    `INSERT INTO attempts (id, puzzle_id, user_id, created_at, eligible, completed, current_state_json)
+    `INSERT INTO attempts (id, puzzle_id, user_id, created_at, eligible, completed)
      VALUES (?, ?, ?, ?,
        CASE WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
                  OR EXISTS(SELECT 1 FROM attempts WHERE user_id = ? AND puzzle_id = ? AND started_at IS NOT NULL)
             THEN 0 ELSE 1 END,
-       0, ?)`
+       0)`
   )
-    .bind(attemptId, puzzleId, authed.userId, now, authed.userId, puzzleId, authed.userId, puzzleId, JSON.stringify(state))
+    .bind(attemptId, puzzleId, authed.userId, now, authed.userId, puzzleId, authed.userId, puzzleId)
     .run();
 
   const eligible = await env.DB.prepare("SELECT eligible FROM attempts WHERE id = ?")
     .bind(attemptId).first<{ eligible: number }>();
 
   return json({
-    attempt: { id: attemptId, puzzleId, eligible: eligible?.eligible === 1, state },
+    attempt: { id: attemptId, puzzleId, eligible: eligible?.eligible === 1, state: new Array(width * height).fill(0) },
     puzzle: { width, height }
   });
 };

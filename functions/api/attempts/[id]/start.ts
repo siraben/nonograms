@@ -11,7 +11,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
 
   const a = await env.DB.prepare(
     `SELECT a.id, a.puzzle_id as puzzleId, a.started_at as startedAt, a.completed as completed,
-            a.eligible as eligible, a.current_state_json as stateJson,
+            a.eligible as eligible,
             p.width as width, p.height as height,
             p.row_clues_json as rowCluesJson, p.col_clues_json as colCluesJson
      FROM attempts a
@@ -25,7 +25,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
       startedAt: string | null;
       completed: number;
       eligible: number;
-      stateJson: string;
       width: number;
       height: number;
       rowCluesJson: string;
