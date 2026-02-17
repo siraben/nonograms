@@ -436,7 +436,7 @@ a {
 .nonogram-fade::after {
   content: "";
   position: absolute;
-  top: var(--fade-top, 0%);
+  top: 0;
   bottom: 0;
   width: 20px;
   z-index: 2;
