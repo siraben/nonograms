@@ -1626,52 +1626,30 @@ function Replay(props: {
         </button>
       </div>
       <div className="card">
-        <h2>Replay</h2>
-        <div className="row replay-controls">
-          <button
-            className="btn"
-            onClick={() => (playing ? pause() : play())}
-            disabled={!moves.length}
-          >
-            {playing ? "Pause" : "Play"}
-          </button>
-          <button className="btn" onClick={() => applyTo(0)} disabled={!moves.length}>
-            Reset
-          </button>
-          <button
-            className="btn icon-btn"
-            onClick={shareReplay}
-            aria-label="Share replay"
-            title="Share replay"
-          >
-            <ShareIcon />
-          </button>
-          <label className="row muted realtime-toggle">
-            <input
-              type="checkbox"
-              checked={realtime}
-              onChange={(e) => { setRealtime(e.target.checked); realtimeRef.current = e.target.checked; }}
-            />
-            Real time
-          </label>
-          <span className="muted">
-            {meta ? (
-              <>
-                {meta.username} &mdash;{" "}
-                {(replayElapsed / 1000).toFixed(1)}s
-                {meta.durationMs ? ` / ${(meta.durationMs / 1000).toFixed(1)}s` : ""} &mdash;{" "}
-                {pos}/{moves.length} moves
-              </>
-            ) : (
-              "Loading..."
-            )}
-          </span>
-          {props.finishedSize && (
-            <button className="btn primary" style={{ marginLeft: "auto" }} onClick={startNewGame}>
-              {props.finishedSize}&times;{props.finishedSize}
+        <div className="card-header-row">
+          <h2>{meta ? `${meta.username}'s Replay` : "Replay"}</h2>
+          <div className="row" style={{ gap: 6 }}>
+            <button
+              className="btn icon-btn"
+              onClick={shareReplay}
+              aria-label="Share replay"
+              title="Share replay"
+            >
+              <ShareIcon />
             </button>
-          )}
+            {props.finishedSize && (
+              <button className="btn primary sm" onClick={startNewGame}>
+                Play {props.finishedSize}&times;{props.finishedSize}
+              </button>
+            )}
+          </div>
         </div>
+        {meta && (
+          <div className="replay-meta">
+            <span>{(replayElapsed / 1000).toFixed(1)}s{meta.durationMs ? ` / ${(meta.durationMs / 1000).toFixed(1)}s` : ""}</span>
+            <span className="muted">{pos}/{moves.length} moves</span>
+          </div>
+        )}
         {puzzle && (
           <NonogramPlayer
             attemptId="_replay"
@@ -1684,6 +1662,26 @@ function Replay(props: {
         )}
         {moves.length > 0 && puzzle && (
           <>
+            <div className="replay-transport">
+              <button
+                className="btn sm"
+                onClick={() => (playing ? pause() : play())}
+                disabled={!moves.length}
+              >
+                {playing ? "Pause" : "Play"}
+              </button>
+              <button className="btn sm" onClick={() => applyTo(0)} disabled={!moves.length}>
+                Reset
+              </button>
+              <label className="row muted realtime-toggle">
+                <input
+                  type="checkbox"
+                  checked={realtime}
+                  onChange={(e) => { setRealtime(e.target.checked); realtimeRef.current = e.target.checked; }}
+                />
+                Real time
+              </label>
+            </div>
             <div
               className="scrubber"
               onMouseDown={(e) => {

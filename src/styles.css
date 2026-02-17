@@ -480,7 +480,7 @@ a {
 }
 
 .scrubber {
-  margin-top: 12px;
+  margin-top: 8px;
   padding: 10px 0;
   cursor: grab;
   touch-action: none;
@@ -796,8 +796,19 @@ a {
   margin-top: 12px;
 }
 
-.replay-controls {
+.replay-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
   margin-bottom: 10px;
+}
+
+.replay-transport {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
 }
 
 .realtime-toggle {
