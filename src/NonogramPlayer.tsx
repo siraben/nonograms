@@ -136,6 +136,9 @@ export default function NonogramPlayer(props: {
     if (solved || props.readonly || finishing.current) return;
     if (!state.some((s) => s === 1)) return;
     if (!progress.allCorrect) return;
+    // Reset retries: the puzzle is (freshly) solved, so give auto-finish
+    // a full set of attempts even if previous solves exhausted retries.
+    autoFinishRetries.current = 0;
     const id = window.setTimeout(() => {
       void finishAttempt(true);
     }, 300);
@@ -264,6 +267,19 @@ export default function NonogramPlayer(props: {
       await Promise.all(pendingFlushes.current);
       if (moveBuffer.current.length > 0) {
         await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+    // Re-verify locally: the user may have made moves that broke the
+    // solution during the async drain above.  Those moves are now on the
+    // server, so calling /finish would return {solved:false}.  Bail out
+    // and let the auto-finish effect re-trigger if the user re-solves.
+    if (auto) {
+      const recheck = countCorrect(
+        stateRef.current, puzzle.width, puzzle.height, puzzle.rowClues, puzzle.colClues,
+      );
+      if (!recheck.allCorrect) {
+        finishing.current = false;
+        return;
       }
     }
     try {
