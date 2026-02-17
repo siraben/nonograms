@@ -444,7 +444,6 @@ a {
   height: 100%;
   background: var(--accent);
   border-radius: 3px;
-  transition: width 0.1s;
 }
 
 .scrubber-dot {
@@ -474,7 +473,6 @@ a {
   box-shadow: var(--shadow);
   transform: translate(-50%, -50%);
   z-index: 2;
-  transition: left 0.05s;
 }
 
 .timeline {

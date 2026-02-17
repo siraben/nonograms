@@ -1416,9 +1416,14 @@ function Replay(props: {
     const baseScale = span < 10000 ? 10000 / Math.max(span, 1) :
                       span > 45000 ? 45000 / span : 1;
 
-    // Start from current elapsed position
+    // If replay already finished, reset to beginning
     let simMs = replayElapsed;
     let lastIdx = pos;
+    if (simMs >= endMs) {
+      applyTo(0);
+      simMs = 0;
+      lastIdx = 0;
+    }
     let prev: number | null = null;
 
     function frame(ts: number) {
