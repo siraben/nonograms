@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import type { CellState, Puzzle, Toast } from "./types";
 
@@ -340,6 +340,25 @@ export default function NonogramPlayer(props: {
     setHoverCol(-1);
   }
 
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const updateScrollHints = useCallback(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    wrap.classList.toggle("can-scroll-left", wrap.scrollLeft > 2);
+    wrap.classList.toggle("can-scroll-right", wrap.scrollLeft + wrap.clientWidth < wrap.scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    updateScrollHints();
+    wrap.addEventListener("scroll", updateScrollHints, { passive: true });
+    window.addEventListener("resize", updateScrollHints);
+    return () => { wrap.removeEventListener("scroll", updateScrollHints); window.removeEventListener("resize", updateScrollHints); };
+  }, [updateScrollHints]);
+
   const { gridTemplateColumns, cells } = useMemo(() => {
     const w = puzzle.width;
     const h = puzzle.height;
@@ -419,8 +438,9 @@ export default function NonogramPlayer(props: {
         </div>
       )}
 
-      <div className="nonogram-wrap">
+      <div className="nonogram-wrap" ref={wrapRef}>
         <div
+          ref={gridRef}
           className={`nonogram${!props.readonly ? " interactive" : ""}`}
           style={{ gridTemplateColumns }}
           onMouseLeave={() => {
@@ -470,9 +490,7 @@ export default function NonogramPlayer(props: {
                   setHoverCol(it.col);
                   onCellEnter(it.idx);
                 }}
-              >
-                {it.state === 2 ? "\u00d7" : ""}
-              </div>
+              />
             );
           })}
         </div>

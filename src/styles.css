@@ -422,6 +422,38 @@ a {
 .nonogram-wrap {
   overflow: auto;
   padding: 4px;
+  position: relative;
+}
+
+.nonogram-wrap::before,
+.nonogram-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.nonogram-wrap::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg), transparent);
+}
+
+.nonogram-wrap::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg), transparent);
+}
+
+.nonogram-wrap.can-scroll-left::before {
+  opacity: 1;
+}
+
+.nonogram-wrap.can-scroll-right::after {
+  opacity: 1;
 }
 
 .nonogram {
@@ -479,10 +511,21 @@ a {
 }
 
 .cell.x {
-  color: var(--danger);
-  font-size: 16px;
-  font-weight: 400;
+  position: relative;
 }
+
+.cell.x::before,
+.cell.x::after {
+  content: "";
+  position: absolute;
+  width: 55%;
+  height: 1.5px;
+  background: var(--danger);
+  border-radius: 1px;
+}
+
+.cell.x::before { transform: rotate(45deg); }
+.cell.x::after { transform: rotate(-45deg); }
 
 .rmaj {
   box-shadow: inset 0 -2px 0 var(--cell-major);
