@@ -463,6 +463,27 @@ a {
   border-radius: 3px;
 }
 
+.scrubber-kde {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 100%;
+  height: 28px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.scrubber-kde path {
+  fill: var(--accent);
+  opacity: 0.25;
+}
+
+.scrubber:hover .scrubber-kde,
+.scrubber:active .scrubber-kde {
+  opacity: 1;
+}
+
 .scrubber-dot {
   position: absolute;
   top: 50%;

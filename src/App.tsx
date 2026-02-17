@@ -1322,6 +1322,47 @@ function Play(props: {
   );
 }
 
+function ScrubberKDE(props: { moves: ReplayMove[] }) {
+  const path = useMemo(() => {
+    const { moves } = props;
+    if (moves.length < 2) return "";
+    const totalMs = moves[moves.length - 1].atMs || 1;
+    const BINS = 80;
+    const bandwidth = Math.max(totalMs / 20, 1);
+    const density = new Float64Array(BINS);
+    for (const m of moves) {
+      const center = (m.atMs / totalMs) * BINS;
+      for (let b = 0; b < BINS; b++) {
+        const dist = (b + 0.5 - center) * (totalMs / BINS);
+        density[b] += Math.exp(-0.5 * (dist / bandwidth) ** 2);
+      }
+    }
+    let maxD = 0;
+    for (let b = 0; b < BINS; b++) if (density[b] > maxD) maxD = density[b];
+    if (maxD === 0) return "";
+    const H = 28;
+    let d = `M0,${H}`;
+    for (let b = 0; b < BINS; b++) {
+      const x = ((b + 0.5) / BINS) * 100;
+      const y = H - (density[b] / maxD) * (H - 2);
+      d += ` L${x.toFixed(2)},${y.toFixed(1)}`;
+    }
+    d += ` L100,${H} Z`;
+    return d;
+  }, [props.moves]);
+
+  if (!path) return null;
+  return (
+    <svg
+      className="scrubber-kde"
+      viewBox="0 0 100 28"
+      preserveAspectRatio="none"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
 function Replay(props: {
   attemptId: string;
   onToast: (t: { kind: "ok" | "bad"; msg: string } | null) => void;
@@ -1677,6 +1718,7 @@ function Replay(props: {
               }}
             >
               <div className="scrubber-track">
+                <ScrubberKDE moves={moves} />
                 {(() => {
                   const totalMs = moves[moves.length - 1].atMs || 1;
                   const fillPct = (replayElapsed / totalMs) * 100;
