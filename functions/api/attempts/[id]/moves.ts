@@ -44,24 +44,32 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
 
   const now = new Date().toISOString();
 
+  // Sort moves by atMs so seq numbers and json_set calls reflect chronological order.
+  const sorted = body.moves
+    .map((m) => ({ idx: m.idx | 0, state: m.state | 0, atMs: Math.max(0, m.atMs | 0) }))
+    .sort((a, b) => a.atMs - b.atMs);
+
   // Get current max seq once
   const seqRow = await env.DB.prepare(
     "SELECT COALESCE(MAX(seq), 0) as maxSeq FROM attempt_moves WHERE attempt_id = ?"
   ).bind(attemptId).first<{ maxSeq: number }>();
   let seq = seqRow?.maxSeq ?? 0;
 
-  // Build batch: one insert per move + one json_set per move for state
+  // For current_state_json, only apply the last state per cell (highest atMs).
+  const finalState = new Map<number, number>();
+  for (const m of sorted) finalState.set(m.idx, m.state);
+
+  // Build batch: inserts for all moves (history), then one json_set per unique cell
   const stmts: D1PreparedStatement[] = [];
-  for (const m of body.moves) {
-    const idx = m.idx | 0;
-    const st = m.state | 0;
-    const atMs = Math.max(0, m.atMs | 0);
+  for (const m of sorted) {
     seq++;
     stmts.push(
       env.DB.prepare(
         "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-      ).bind(attemptId, seq, atMs, idx, st, now)
+      ).bind(attemptId, seq, m.atMs, m.idx, m.state, now)
     );
+  }
+  for (const [idx, st] of finalState) {
     stmts.push(
       env.DB.prepare(
         "UPDATE attempts SET current_state_json = json_set(current_state_json, ?, ?) WHERE id = ?"
