@@ -444,6 +444,7 @@ a {
   place-items: center;
   font-size: 12px;
   font-weight: 600;
+  overflow: hidden;
 }
 
 .cell,
