@@ -10,6 +10,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
 
   const url = new URL(request.url);
   const page = Math.max(0, parseInt(url.searchParams.get("page") || "0", 10) || 0);
+  const hideAbandoned = url.searchParams.get("hideAbandoned") === "1";
+
+  const whereClause = hideAbandoned
+    ? "WHERE a.user_id = ? AND NOT (a.completed = 1 AND a.finished_at IS NULL)"
+    : "WHERE a.user_id = ?";
 
   const rows = await env.DB.prepare(
     `SELECT a.id AS attemptId, a.puzzle_id AS puzzleId, a.created_at AS createdAt,
@@ -18,7 +23,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
             p.width, p.height
      FROM attempts a
      JOIN puzzles p ON p.id = a.puzzle_id
-     WHERE a.user_id = ?
+     ${whereClause}
      ORDER BY a.created_at DESC
      LIMIT ? OFFSET ?`
   )

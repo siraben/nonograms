@@ -1814,7 +1814,7 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
     (async () => {
       try {
         const r = await api<{ games: GameEntry[]; hasMore: boolean; page: number }>(
-          `/api/games?page=${page}`
+          `/api/games?page=${page}${hideAbandoned ? "&hideAbandoned=1" : ""}`
         );
         setGames(r.games);
         setHasMore(r.hasMore);
@@ -1824,7 +1824,7 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
         setLoading(false);
       }
     })();
-  }, [page]);
+  }, [page, hideAbandoned]);
 
   async function newGame(puzzleId: string) {
     props.onToast(null);
@@ -1878,7 +1878,7 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
           <input
             type="checkbox"
             checked={hideAbandoned}
-            onChange={(e) => setHideAbandoned(e.target.checked)}
+            onChange={(e) => { setHideAbandoned(e.target.checked); setPage(0); }}
           />
           Hide abandoned
         </label>
@@ -1888,7 +1888,7 @@ function MyGames(props: { onToast: (t: { kind: "ok" | "bad"; msg: string } | nul
           <div className="muted">No games yet. Start one from the home page!</div>
         ) : (
           <div className="list">
-            {games.filter((g) => !hideAbandoned || g.status !== "abandoned").map((g) => (
+            {games.map((g) => (
               <div key={g.attemptId} className="item">
                 <div className="title">
                   {g.width}x{g.height}
