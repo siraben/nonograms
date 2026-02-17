@@ -509,6 +509,7 @@ a {
 }
 
 .cell {
+  position: relative;
   cursor: pointer;
   background: var(--cell-bg);
   transition: background 0.08s;
@@ -522,22 +523,20 @@ a {
   background: var(--cell-filled);
 }
 
-.cell.x {
-  position: relative;
-}
-
 .cell.x::before,
 .cell.x::after {
   content: "";
   position: absolute;
+  top: 50%;
+  left: 50%;
   width: 55%;
   height: 1.5px;
   background: var(--danger);
   border-radius: 1px;
 }
 
-.cell.x::before { transform: rotate(45deg); }
-.cell.x::after { transform: rotate(-45deg); }
+.cell.x::before { transform: translate(-50%, -50%) rotate(45deg); }
+.cell.x::after { transform: translate(-50%, -50%) rotate(-45deg); }
 
 .rmaj {
   box-shadow: inset 0 -2px 0 var(--cell-major);

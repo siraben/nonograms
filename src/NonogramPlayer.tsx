@@ -361,7 +361,7 @@ export default function NonogramPlayer(props: {
     return () => { wrap.removeEventListener("scroll", updateScrollHints); window.removeEventListener("resize", updateScrollHints); };
   }, [updateScrollHints]);
 
-  const { gridTemplateColumns, cells } = useMemo(() => {
+  const { gridTemplateColumns, gridTemplateRows, cells } = useMemo(() => {
     const w = puzzle.width;
     const h = puzzle.height;
 
@@ -421,7 +421,8 @@ export default function NonogramPlayer(props: {
       }
     }
 
-    return { gridTemplateColumns: `repeat(${cols}, minmax(var(--cell-min, 18px), var(--cell-size, 28px)))`, cells: items };
+    const track = `repeat(${cols}, minmax(var(--cell-min, 18px), var(--cell-size, 28px)))`;
+    return { gridTemplateColumns: track, gridTemplateRows: `repeat(${rows}, minmax(var(--cell-min, 18px), var(--cell-size, 28px)))`, cells: items };
   }, [puzzle, state]);
 
   return (
@@ -445,7 +446,7 @@ export default function NonogramPlayer(props: {
           <div
             ref={gridRef}
             className={`nonogram${!props.readonly ? " interactive" : ""}`}
-            style={{ gridTemplateColumns }}
+            style={{ gridTemplateColumns, gridTemplateRows }}
             onMouseLeave={() => {
               setHoverRow(-1);
               setHoverCol(-1);
