@@ -1399,13 +1399,19 @@ function Replay(props: {
     }
   }, [shouldAutoPlay, moves, puzzle]);
 
-  // Auto-scroll timeline to current move
+  // Auto-scroll timeline to current move (within the timeline container only)
   useEffect(() => {
     const container = timelineRef.current;
     if (!container) return;
     const active = container.querySelector("[data-active]") as HTMLElement | null;
     if (active) {
-      active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      const ct = container.getBoundingClientRect();
+      const at = active.getBoundingClientRect();
+      if (at.top < ct.top) {
+        container.scrollTop += at.top - ct.top;
+      } else if (at.bottom > ct.bottom) {
+        container.scrollTop += at.bottom - ct.bottom;
+      }
     }
   }, [pos]);
 
