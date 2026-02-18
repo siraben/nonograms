@@ -333,6 +333,10 @@ a {
   .shell {
     max-width: 1100px;
   }
+  .size-grid {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 480px;
+  }
 }
 
 @media (max-width: 540px) {
