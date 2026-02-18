@@ -494,6 +494,10 @@ function ChangePasswordModal(props: {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     props.onToast(null);
+    if (newPassword.length < 8) {
+      props.onToast({ kind: "bad", msg: "Password must be at least 8 characters" });
+      return;
+    }
     setSubmitting(true);
     try {
       await Auth.changePassword(currentPassword, newPassword);
@@ -635,6 +639,10 @@ function AuthCard(props: {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     props.onToast(null);
+    if (password.length < 8) {
+      props.onToast({ kind: "bad", msg: "Password must be at least 8 characters" });
+      return;
+    }
     setSubmitting(true);
     try {
       if (props.mode === "login") {
