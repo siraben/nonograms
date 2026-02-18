@@ -765,7 +765,7 @@ function PublicLeaderboard() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await api<{ leaderboard5: PublicEntry[]; leaderboard10: PublicEntry[]; leaderboard15: PublicEntry[]; leaderboard20: PublicEntry[] }>("/api/leaderboard/public?period=day");
+        const r = await api<{ leaderboard5: PublicEntry[]; leaderboard10: PublicEntry[]; leaderboard15: PublicEntry[]; leaderboard20: PublicEntry[] }>("/api/leaderboard/public?period=week");
         setEntries5(r.leaderboard5);
         setEntries10(r.leaderboard10);
         setEntries15(r.leaderboard15);
@@ -785,7 +785,7 @@ function PublicLeaderboard() {
   return (
     <>
       <div className="card">
-        <h2>Today's Leaderboard</h2>
+        <h2>Weekly Leaderboard</h2>
         <div className="btn-group" style={{ marginBottom: 8 }}>
           <button className={`btn sm${tab === "5" ? " primary" : ""}`} onClick={() => setTab("5")}>5x5</button>
           <button className={`btn sm${tab === "10" ? " primary" : ""}`} onClick={() => setTab("10")}>10x10</button>
