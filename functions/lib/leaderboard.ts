@@ -15,17 +15,48 @@ type LeaderboardDbRow = Omit<LeaderboardRow, "kdePath"> & {
   kdePath: string | null;
 };
 
+/** Return midnight America/New_York as a UTC Date. */
+function etMidnight(year: number, month: number, day: number): Date {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  // Try EST (UTC-5) then EDT (UTC-4); check which gives midnight ET on the right date
+  for (const offset of [5, 4]) {
+    const d = new Date(Date.UTC(year, month, day, offset));
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric", month: "numeric", day: "numeric",
+      hour: "numeric", hour12: false,
+    }).formatToParts(d);
+    const h = parseInt(parts.find(p => p.type === "hour")!.value) % 24;
+    const dd = parseInt(parts.find(p => p.type === "day")!.value);
+    if (h === 0 && dd === day) return d;
+  }
+  return new Date(Date.UTC(year, month, day, 5)); // fallback EST
+}
+
+/** Get "now" as an ET local date. */
+function etNow(): { year: number; month: number; day: number; dayOfWeek: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric", month: "numeric", day: "numeric",
+    weekday: "short",
+  }).formatToParts(new Date());
+  const val = (type: string) => parseInt(parts.find(p => p.type === type)!.value);
+  const wday = parts.find(p => p.type === "weekday")!.value;
+  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return { year: val("year"), month: val("month") - 1, day: val("day"), dayOfWeek: dayMap[wday] ?? 0 };
+}
+
 export function periodCutoff(period: string | null): string | null {
-  const now = new Date();
+  const { year, month, day, dayOfWeek } = etNow();
   switch (period) {
     case "day":
-      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+      return etMidnight(year, month, day).toISOString();
     case "week": {
-      const daysSinceMonday = (now.getUTCDay() + 6) % 7;
-      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceMonday)).toISOString();
+      const daysSinceMonday = (dayOfWeek + 6) % 7;
+      return etMidnight(year, month, day - daysSinceMonday).toISOString();
     }
     case "month":
-      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+      return etMidnight(year, month, 1).toISOString();
     default: return null;
   }
 }
