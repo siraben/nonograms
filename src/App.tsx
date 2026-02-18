@@ -457,7 +457,7 @@ export default function App() {
       )}
 
       {!busy && authedRoute.name === "play" && (
-        <Play attemptId={authedRoute.attemptId} onToast={setToast} currentUser={user?.username} />
+        <Play key={authedRoute.attemptId} attemptId={authedRoute.attemptId} onToast={setToast} currentUser={user?.username} />
       )}
 
       {authedRoute.name === "replay" && (
@@ -1114,8 +1114,11 @@ function Play(props: {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [finished, setFinished] = useState(false);
-
   useEffect(() => {
+    setFinished(false);
+    setPuzzle(null);
+    setAttempt(null);
+    setDims(null);
     (async () => {
       setLoading(true);
       try {
