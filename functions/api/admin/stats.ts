@@ -25,8 +25,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
     env.DB.prepare("SELECT COUNT(*) as c FROM attempts WHERE started_at IS NOT NULL AND completed = 0").first<{ c: number }>(),
     env.DB.prepare("SELECT COUNT(*) as c FROM sessions WHERE expires_at > ?").bind(now).first<{ c: number }>(),
     env.DB.prepare(
-      "SELECT id, username, created_at as createdAt FROM users ORDER BY created_at DESC LIMIT 20"
-    ).all<{ id: string; username: string; createdAt: string }>(),
+      "SELECT u.id, u.username, u.created_at as createdAt, u.invite_code_id as inviteCodeId FROM users u ORDER BY u.created_at DESC LIMIT 20"
+    ).all<{ id: string; username: string; createdAt: string; inviteCodeId: string | null }>(),
     env.DB.prepare(
       `SELECT a.id as attemptId, u.username, a.duration_ms as durationMs, a.finished_at as finishedAt,
               p.width, p.height

@@ -1782,7 +1782,7 @@ type AdminStats = {
   totalCompleted: number;
   inProgress: number;
   activeSessions: number;
-  recentSignups: { id: string; username: string; createdAt: string }[];
+  recentSignups: { id: string; username: string; createdAt: string; inviteCodeId: string | null }[];
   recentCompletions: { attemptId: string; username: string; durationMs: number; finishedAt: string; width: number; height: number }[];
   inProgressAttempts: { attemptId: string; username: string; startedAt: string; width: number; height: number }[];
 };
@@ -1932,7 +1932,7 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
                 {stats.recentSignups.map((u) => (
                   <div key={u.id} className="item">
                     <div className="title">{u.username}</div>
-                    <div className="meta">{fmtTime(u.createdAt)}</div>
+                    <div className="meta">{fmtTime(u.createdAt)}{u.inviteCodeId && <> &mdash; invite {u.inviteCodeId.slice(0, 8)}</>}</div>
                   </div>
                 ))}
               </div>
@@ -1971,13 +1971,13 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
             className="input"
             value={newCode}
             onChange={(e) => setNewCode(e.target.value)}
-            placeholder="Code (blank = random)"
+            placeholder="Code"
           />
           <input
             className="input input-sm"
             value={maxUses}
             onChange={(e) => setMaxUses(e.target.value)}
-            placeholder="Max uses"
+            placeholder="Max"
             type="number"
             min="1"
           />
@@ -1985,7 +1985,7 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
             className="input input-sm"
             value={expiresInDays}
             onChange={(e) => setExpiresInDays(e.target.value)}
-            placeholder="Expires (days)"
+            placeholder="Expires"
             type="number"
             min="1"
           />
