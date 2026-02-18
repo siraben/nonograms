@@ -1805,6 +1805,10 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
   const [expiresInDays, setExpiresInDays] = useState("");
   const [creating, setCreating] = useState(false);
   const [lastCreatedCode, setLastCreatedCode] = useState<string | null>(null);
+  const [signupPage, setSignupPage] = useState(0);
+  const [completionPage, setCompletionPage] = useState(0);
+  const [invitePage, setInvitePage] = useState(0);
+  const ADMIN_PAGE_SIZE = 5;
 
   async function loadData() {
     setLoading(true);
@@ -1924,12 +1928,14 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
       {stats && (
         <>
           <div className="card">
-            <h2>Recent Signups</h2>
+            <CardHeader title="Recent Signups">
+              <Pagination page={signupPage} onPageChange={setSignupPage} totalPages={Math.max(1, Math.ceil(stats.recentSignups.length / ADMIN_PAGE_SIZE))} />
+            </CardHeader>
             {stats.recentSignups.length === 0 ? (
               <div className="muted">No signups yet</div>
             ) : (
               <div className="list">
-                {stats.recentSignups.map((u) => (
+                {stats.recentSignups.slice(signupPage * ADMIN_PAGE_SIZE, (signupPage + 1) * ADMIN_PAGE_SIZE).map((u) => (
                   <div key={u.id} className="item">
                     <div className="title">{u.username}</div>
                     <div className="meta">{fmtTime(u.createdAt)}{u.inviteCodeId && <> &mdash; invite {u.inviteCodeId.slice(0, 8)}</>}</div>
@@ -1940,12 +1946,14 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
           </div>
 
           <div className="card">
-            <h2>Recent Completions</h2>
+            <CardHeader title="Recent Completions">
+              <Pagination page={completionPage} onPageChange={setCompletionPage} totalPages={Math.max(1, Math.ceil(stats.recentCompletions.length / ADMIN_PAGE_SIZE))} />
+            </CardHeader>
             {stats.recentCompletions.length === 0 ? (
               <div className="muted">No completions yet</div>
             ) : (
               <div className="list">
-                {stats.recentCompletions.map((c) => (
+                {stats.recentCompletions.slice(completionPage * ADMIN_PAGE_SIZE, (completionPage + 1) * ADMIN_PAGE_SIZE).map((c) => (
                   <div key={c.attemptId} className="item">
                     <div className="title">
                       {c.username}
@@ -1965,7 +1973,9 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
       )}
 
       <div className="card">
-        <h2>Invite Codes</h2>
+        <CardHeader title="Invite Codes">
+          <Pagination page={invitePage} onPageChange={setInvitePage} totalPages={Math.max(1, Math.ceil(invites.length / ADMIN_PAGE_SIZE))} />
+        </CardHeader>
         <form className="admin-invite-form" onSubmit={createInvite}>
           <input
             className="input"
@@ -2002,7 +2012,7 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
           <div className="muted gap-above">No invite codes</div>
         ) : (
           <div className="list gap-above">
-            {invites.map((inv) => (
+            {invites.slice(invitePage * ADMIN_PAGE_SIZE, (invitePage + 1) * ADMIN_PAGE_SIZE).map((inv) => (
               <div key={inv.id} className="item invite-item">
                 <div style={{ flex: 1 }}>
                   <span className="title">
