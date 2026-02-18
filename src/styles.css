@@ -902,8 +902,9 @@ a {
 
 @media (min-width: 1024px) {
   .size-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, 115px);
     max-width: none;
+    justify-content: center;
   }
 }
 
