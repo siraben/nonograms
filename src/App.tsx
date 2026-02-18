@@ -995,9 +995,7 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
             return (
             <div key={label} className="card">
               <CardHeader title={`${label} Leaderboard`}>
-                {entries.length > PAGE_SIZE && (
-                  <Pagination page={page} onPageChange={setPage} totalPages={totalPages} />
-                )}
+                <Pagination page={page} onPageChange={setPage} totalPages={totalPages} />
               </CardHeader>
               {loading ? (
                 <div className="muted">Loading...</div>
