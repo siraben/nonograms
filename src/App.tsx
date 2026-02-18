@@ -1595,7 +1595,7 @@ function Replay(props: {
                 })()}
                 {moves.map((m, i) => {
                   const totalMs = moves[moves.length - 1].atMs || 1;
-                  const pct = (m.atMs / totalMs) * 100;
+                  const pct = Math.min((m.atMs / totalMs) * 100, 99.5);
                   return (
                     <div
                       key={m.seq}
