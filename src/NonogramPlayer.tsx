@@ -538,7 +538,7 @@ export default function NonogramPlayer(props: {
 
       {!props.readonly && !solved && state.some((s) => s === 1) && (
         <div className="check-area hint">
-          {progress.correctRows}/{puzzle.height} rows, {progress.correctCols}/{puzzle.width} columns
+          {progress.correctRows}/{puzzle.height} rows, {progress.correctCols}/{puzzle.width} columns satisfied
         </div>
       )}
     </div>
