@@ -8,7 +8,7 @@ import { getTurnstile } from "./turnstile";
 import { useOnline } from "./useOnline";
 import { genPuzzle } from "../functions/lib/puzzle";
 import { randomU32 } from "../functions/lib/rng";
-import { Sun, Moon, CircleHelp, Share, ChevronLeft, ChevronRight, SkipBack, Play as PlayIcon, Pause } from "lucide-react";
+import { Sun, Moon, CircleHelp, Share, Link, ChevronLeft, ChevronRight, SkipBack, Play as PlayIcon, Pause } from "lucide-react";
 import { Modal, Pagination, BackButton, CardHeader } from "./ui";
 
 type Route =
@@ -1284,6 +1284,8 @@ function Replay(props: {
   const [state, setState] = useState<CellState[]>(
     Array.from({ length: 100 }, () => 0 as CellState)
   );
+  const [shared, setShared] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const wantAutoPlay = useRef(false);
   const raf = useRef<number | null>(null);
@@ -1327,11 +1329,13 @@ function Replay(props: {
         const r = await api<{
           puzzle: Puzzle;
           moves: ReplayMove[];
-          attempt: { username: string; durationMs: number | null };
+          attempt: { username: string; durationMs: number | null; shared?: boolean };
         }>(`/api/replay/${encodeURIComponent(props.attemptId)}`);
         setPuzzle(r.puzzle);
         setMoves(r.moves);
         setMeta({ username: r.attempt.username, durationMs: r.attempt.durationMs });
+        setShared(!!r.attempt.shared);
+        setIsOwner(!!props.currentUser && r.attempt.username === props.currentUser);
         setState(
           Array.from({ length: r.puzzle.width * r.puzzle.height }, () => 0 as CellState)
         );
@@ -1444,16 +1448,27 @@ function Replay(props: {
     setPlaying(false);
   }
 
-  async function shareReplay() {
-    const url = `${location.origin}/s/${props.attemptId}`;
+  async function copyReplayLink() {
+    const url = `${location.origin}/#/replay/${props.attemptId}`;
     const size = puzzle ? `${puzzle.width}x${puzzle.height}` : "?x?";
     const time = meta?.durationMs ? `${(meta.durationMs / 1000).toFixed(2)}s` : "?s";
-    const isOwn = props.currentUser && meta?.username === props.currentUser;
-    const who = isOwn ? "I" : (meta?.username ?? "Someone");
-    const verb = isOwn ? "Try to beat my time or watch my replay" : "Watch the replay";
+    const who = isOwner ? "I" : (meta?.username ?? "Someone");
+    const verb = isOwner ? "Try to beat my time or watch my replay" : "Watch the replay";
     const text = `${who} solved a ${size} nonogram in ${time}! ${verb} at ${url}`;
     await navigator.clipboard.writeText(text);
     props.onToast({ kind: "ok", msg: "Copied to clipboard!" });
+  }
+
+  async function toggleShare() {
+    try {
+      const r = await api<{ shared: boolean }>(`/api/replay/${encodeURIComponent(props.attemptId)}/share`, {
+        method: "POST",
+      });
+      setShared(r.shared);
+      props.onToast({ kind: "ok", msg: r.shared ? "Replay shared" : "Replay unshared" });
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    }
   }
 
   async function startNewGame() {
@@ -1498,14 +1513,26 @@ function Replay(props: {
       <div className="card">
         <CardHeader title={meta ? `${meta.username}'s Replay` : "Replay"}>
           <div className="row" style={{ gap: 6 }}>
-            <button
-              className="btn icon-btn"
-              onClick={shareReplay}
-              aria-label="Share replay"
-              title="Share replay"
-            >
-              <Share size={18} />
-            </button>
+            {isOwner && (
+              <button
+                className={`btn icon-btn${shared ? " primary" : ""}`}
+                onClick={toggleShare}
+                title={shared ? "Stop sharing" : "Share"}
+                aria-label={shared ? "Stop sharing" : "Share"}
+              >
+                <Share size={18} />
+              </button>
+            )}
+            {shared && (
+              <button
+                className="btn icon-btn"
+                onClick={copyReplayLink}
+                aria-label="Copy link"
+                title="Copy link"
+              >
+                <Link size={18} />
+              </button>
+            )}
             {props.finishedSize && (
               <button className="btn primary sm" onClick={startNewGame}>
                 Play {props.finishedSize}&times;{props.finishedSize}
