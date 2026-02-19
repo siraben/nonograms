@@ -74,6 +74,9 @@ export default function NonogramPlayer(props: {
   const dragging = useRef(false);
   const paintValue = useRef<CellState>(0);
   const lastTouchIdx = useRef(-1);
+  const dragCells = useRef<number[]>([]);
+  const lockedAxis = useRef<"row" | "col" | null>(null);
+  const lockedLine = useRef(-1);
   const finishing = useRef(false);
   const autoFinishRetries = useRef(0);
   const moveCount = useRef(props.initialMoveCount ?? 0);
@@ -108,10 +111,34 @@ export default function NonogramPlayer(props: {
   useEffect(() => {
     const handleUp = () => {
       dragging.current = false;
+      dragCells.current = [];
+      lockedAxis.current = null;
+      lockedLine.current = -1;
     };
     document.addEventListener("mouseup", handleUp);
     return () => document.removeEventListener("mouseup", handleUp);
   }, []);
+
+  const AXIS_LOCK_THRESHOLD = 5;
+
+  // After accumulating cells, check if they all share a row or column; if 5+, lock.
+  function checkAxisLock() {
+    const cells = dragCells.current;
+    if (lockedAxis.current || cells.length < AXIS_LOCK_THRESHOLD) return;
+    const w = puzzle.width;
+    const rows = new Set(cells.map((i) => Math.floor(i / w)));
+    if (rows.size === 1) { lockedAxis.current = "row"; lockedLine.current = [...rows][0]; return; }
+    const cols = new Set(cells.map((i) => i % w));
+    if (cols.size === 1) { lockedAxis.current = "col"; lockedLine.current = [...cols][0]; return; }
+  }
+
+  // Snap an index to the locked axis (nearest cell in the locked row/col).
+  function snapToAxis(idx: number): number {
+    if (!lockedAxis.current) return idx;
+    const w = puzzle.width;
+    if (lockedAxis.current === "row") return lockedLine.current * w + (idx % w);
+    return Math.floor(idx / w) * w + lockedLine.current;
+  }
 
   // Flush buffered moves when tab becomes visible again (mobile browsers
   // throttle/kill timers in background tabs, so the 150ms flush may never fire).
@@ -170,6 +197,9 @@ export default function NonogramPlayer(props: {
   function onCellDown(idx: number) {
     if (props.readonly || solved || moveLimited) return;
     dragging.current = true;
+    dragCells.current = [idx];
+    lockedAxis.current = null;
+    lockedLine.current = -1;
     const cur = stateRef.current[idx];
     const newVal = cycleState(cur);
     paintValue.current = newVal;
@@ -184,6 +214,9 @@ export default function NonogramPlayer(props: {
   // Mouse enters cell while dragging: paint with same value
   function onCellEnter(idx: number) {
     if (!dragging.current || props.readonly || solved || moveLimited) return;
+    idx = snapToAxis(idx);
+    dragCells.current.push(idx);
+    checkAxisLock();
     applyCell(idx, paintValue.current);
   }
 
@@ -341,6 +374,9 @@ export default function NonogramPlayer(props: {
     const idx = getCellIdx(touch.clientX, touch.clientY);
     if (idx === null || idx < 0) return;
     dragging.current = true;
+    dragCells.current = [idx];
+    lockedAxis.current = null;
+    lockedLine.current = -1;
     lastTouchIdx.current = idx;
     const cur = stateRef.current[idx];
     const newVal = cycleState(cur);
@@ -359,9 +395,13 @@ export default function NonogramPlayer(props: {
     if (!dragging.current || props.readonly || solved || moveLimited) return;
     e.preventDefault();
     const touch = e.touches[0];
-    const idx = getCellIdx(touch.clientX, touch.clientY);
-    if (idx === null || idx < 0 || idx === lastTouchIdx.current) return;
+    let idx = getCellIdx(touch.clientX, touch.clientY);
+    if (idx === null || idx < 0) return;
+    idx = snapToAxis(idx);
+    if (idx === lastTouchIdx.current) return;
     lastTouchIdx.current = idx;
+    dragCells.current.push(idx);
+    checkAxisLock();
     applyCell(idx, paintValue.current);
     setHoverRow(Math.floor(idx / puzzle.width));
     setHoverCol(idx % puzzle.width);
@@ -370,6 +410,9 @@ export default function NonogramPlayer(props: {
   function onTouchEnd(e: React.TouchEvent) {
     e.preventDefault();
     dragging.current = false;
+    dragCells.current = [];
+    lockedAxis.current = null;
+    lockedLine.current = -1;
     lastTouchIdx.current = -1;
     setHoverRow(-1);
     setHoverCol(-1);
