@@ -391,9 +391,11 @@ export default function App() {
 
               <h3>Controls</h3>
               <ul>
-                <li>Click to cycle: empty → filled → X → empty</li>
+                <li>Default: click to cycle empty → filled → X → empty</li>
+                <li>Optional: left click to fill, right click for X (toggle below grid)</li>
                 <li>Click and drag to paint multiple cells</li>
                 <li>Touch and drag works on mobile</li>
+                <li>Satisfied row/column clues are greyed out</li>
               </ul>
 
               <h3>Timer &amp; Leaderboard</h3>

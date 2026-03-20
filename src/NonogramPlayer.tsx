@@ -23,24 +23,26 @@ function lineClue(bits: number[]): number[] {
 function countCorrect(
   state: CellState[], w: number, h: number,
   rowClues: number[][], colClues: number[][],
-): { correctRows: number; correctCols: number; allCorrect: boolean } {
+): { correctRows: number; correctCols: number; allCorrect: boolean; satisfiedRows: Set<number>; satisfiedCols: Set<number> } {
   let correctRows = 0;
+  const satisfiedRows = new Set<number>();
   for (let r = 0; r < h; r++) {
     const bits = [];
     for (let c = 0; c < w; c++) bits.push(state[r * w + c] === 1 ? 1 : 0);
     const got = lineClue(bits);
     const want = rowClues[r];
-    if (got.length === want.length && got.every((v, i) => v === want[i])) correctRows++;
+    if (got.length === want.length && got.every((v, i) => v === want[i])) { correctRows++; satisfiedRows.add(r); }
   }
   let correctCols = 0;
+  const satisfiedCols = new Set<number>();
   for (let c = 0; c < w; c++) {
     const bits = [];
     for (let r = 0; r < h; r++) bits.push(state[r * w + c] === 1 ? 1 : 0);
     const got = lineClue(bits);
     const want = colClues[c];
-    if (got.length === want.length && got.every((v, i) => v === want[i])) correctCols++;
+    if (got.length === want.length && got.every((v, i) => v === want[i])) { correctCols++; satisfiedCols.add(c); }
   }
-  return { correctRows, correctCols, allCorrect: correctRows === h && correctCols === w };
+  return { correctRows, correctCols, allCorrect: correctRows === h && correctCols === w, satisfiedRows, satisfiedCols };
 }
 
 export default function NonogramPlayer(props: {
@@ -81,6 +83,10 @@ export default function NonogramPlayer(props: {
   const autoFinishRetries = useRef(0);
   const moveCount = useRef(props.initialMoveCount ?? 0);
   const [moveLimited, setMoveLimited] = useState(false);
+  const [clickMode, setClickMode] = useState<"cycle" | "lr">(() => {
+    const saved = localStorage.getItem("nonogram-click-mode");
+    return saved === "lr" ? "lr" : "cycle";
+  });
 
   useEffect(() => {
     setState(props.initialState);
@@ -157,8 +163,7 @@ export default function NonogramPlayer(props: {
     [state, puzzle],
   );
 
-  // Auto-finish: check clues after state settles (debounced to avoid
-  // triggering on transient states while the user cycles a cell)
+  // Auto-finish: check clues after state settles
   useEffect(() => {
     if (solved || props.readonly || finishing.current) return;
     if (!state.some((s) => s === 1)) return;
@@ -166,10 +171,7 @@ export default function NonogramPlayer(props: {
     // Reset retries: the puzzle is (freshly) solved, so give auto-finish
     // a full set of attempts even if previous solves exhausted retries.
     autoFinishRetries.current = 0;
-    const id = window.setTimeout(() => {
-      void finishAttempt(true);
-    }, 300);
-    return () => window.clearTimeout(id);
+    void finishAttempt(true);
   }, [state, progress.allCorrect]);
 
   function stopTimer() {
@@ -183,6 +185,16 @@ export default function NonogramPlayer(props: {
     return 0;
   }
 
+  // Left/right click mode: left toggles fill, right toggles X
+  function lrState(cur: CellState, button: number): CellState {
+    if (button === 2) return cur === 2 ? 0 : 2; // right click: toggle X
+    return cur === 1 ? 0 : 1; // left click: toggle fill
+  }
+
+  function resolveNewState(cur: CellState, button: number): CellState {
+    return clickMode === "lr" ? lrState(cur, button) : cycleState(cur);
+  }
+
   function applyCell(idx: number, newState: CellState) {
     setState((prev) => {
       if (prev[idx] === newState) return prev;
@@ -193,15 +205,15 @@ export default function NonogramPlayer(props: {
     queueMove(idx, newState);
   }
 
-  // Mousedown on a cell: cycle it and start drag-painting
-  function onCellDown(idx: number) {
+  // Mousedown on a cell: set state and start drag-painting
+  function onCellDown(idx: number, button: number = 0) {
     if (props.readonly || solved || moveLimited) return;
     dragging.current = true;
     dragCells.current = [idx];
     lockedAxis.current = null;
     lockedLine.current = -1;
     const cur = stateRef.current[idx];
-    const newVal = cycleState(cur);
+    const newVal = resolveNewState(cur, button);
     paintValue.current = newVal;
     setState((prev) => {
       const next = prev.slice();
@@ -540,11 +552,16 @@ export default function NonogramPlayer(props: {
                 const highlight =
                   (it.clueRow !== undefined && it.clueRow === hoverRow) ||
                   (it.clueCol !== undefined && it.clueCol === hoverCol);
+                const satisfied =
+                  !solved &&
+                  ((it.clueRow !== undefined && progress.satisfiedRows.has(it.clueRow)) ||
+                   (it.clueCol !== undefined && progress.satisfiedCols.has(it.clueCol)));
                 const cls =
                   "clue" +
                   (it.rmaj ? " rmaj" : "") +
                   (it.cmaj ? " cmaj" : "") +
-                  (highlight ? " highlight" : "");
+                  (highlight ? " highlight" : "") +
+                  (satisfied ? " satisfied" : "");
                 return (
                   <div key={i} className={cls}>
                     {it.text}
@@ -563,7 +580,7 @@ export default function NonogramPlayer(props: {
                   data-idx={it.idx}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    onCellDown(it.idx);
+                    onCellDown(it.idx, e.button);
                     setHoverRow(it.row);
                     setHoverCol(it.col);
                   }}
@@ -582,6 +599,23 @@ export default function NonogramPlayer(props: {
       {!props.readonly && !solved && state.some((s) => s === 1) && (
         <div className="check-area hint">
           {progress.correctRows}/{puzzle.height} rows, {progress.correctCols}/{puzzle.width} columns satisfied
+        </div>
+      )}
+
+      {!props.readonly && (
+        <div className="click-mode-toggle hint">
+          <label>
+            <input
+              type="checkbox"
+              checked={clickMode === "lr"}
+              onChange={(e) => {
+                const mode = e.target.checked ? "lr" : "cycle";
+                setClickMode(mode);
+                localStorage.setItem("nonogram-click-mode", mode);
+              }}
+            />
+            {" "}Left click fill, right click X
+          </label>
         </div>
       )}
     </div>

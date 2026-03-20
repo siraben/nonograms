@@ -399,11 +399,16 @@ a {
 }
 
 .toast {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
   padding: 10px 14px;
   border-radius: 8px;
-  margin-bottom: 12px;
   font-size: 14px;
   font-weight: 500;
+  pointer-events: none;
 }
 
 .toast.ok {
@@ -510,6 +515,10 @@ a {
 .clue {
   background: var(--clue-bg);
   color: var(--muted);
+}
+
+.clue.satisfied {
+  opacity: 0.35;
 }
 
 .clue.highlight {
@@ -926,6 +935,11 @@ a {
 .check-area {
   text-align: center;
   margin-top: 12px;
+}
+
+.click-mode-toggle {
+  text-align: center;
+  margin-top: 8px;
 }
 
 .replay-meta {
