@@ -76,6 +76,7 @@ export default function NonogramPlayer(props: {
   const dragging = useRef(false);
   const paintValue = useRef<CellState>(0);
   const lastTouchIdx = useRef(-1);
+  const lastMouseIdx = useRef(-1);
   const dragCells = useRef<number[]>([]);
   const lockedAxis = useRef<"row" | "col" | null>(null);
   const lockedLine = useRef(-1);
@@ -113,21 +114,66 @@ export default function NonogramPlayer(props: {
     };
   }, [props.startedAt, props.readonly, solved]);
 
-  // Global mouseup ends drag
+  // Interpolate all grid cells between two indices (Bresenham line on grid coords)
+  function interpolateCells(fromIdx: number, toIdx: number): number[] {
+    const w = puzzle.width;
+    let r0 = Math.floor(fromIdx / w), c0 = fromIdx % w;
+    let r1 = Math.floor(toIdx / w), c1 = toIdx % w;
+    const cells: number[] = [];
+    const dr = Math.abs(r1 - r0), dc = Math.abs(c1 - c0);
+    const sr = r0 < r1 ? 1 : -1, sc = c0 < c1 ? 1 : -1;
+    let err = dr - dc;
+    while (true) {
+      cells.push(r0 * w + c0);
+      if (r0 === r1 && c0 === c1) break;
+      const e2 = 2 * err;
+      if (e2 > -dc) { err -= dc; r0 += sr; }
+      if (e2 < dr) { err += dr; c0 += sc; }
+    }
+    return cells;
+  }
+
+  // Global mouseup ends drag; global mousemove interpolates skipped cells
   useEffect(() => {
     const handleUp = () => {
       dragging.current = false;
       dragCells.current = [];
       lockedAxis.current = null;
       lockedLine.current = -1;
+      lastMouseIdx.current = -1;
+    };
+    const handleMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      const raw = getCellIdx(e.clientX, e.clientY);
+      if (raw === null || raw < 0) return;
+      let idx = snapToAxis(raw);
+      if (idx === lastMouseIdx.current) return;
+      const prev = lastMouseIdx.current;
+      lastMouseIdx.current = idx;
+      // Interpolate to fill any skipped cells
+      const cells = prev >= 0 ? interpolateCells(prev, idx) : [idx];
+      // Skip the first cell (already painted) unless it's the only one
+      const start = prev >= 0 ? 1 : 0;
+      for (let i = start; i < cells.length; i++) {
+        dragCells.current.push(cells[i]);
+        checkAxisLock();
+        applyCell(cells[i], paintValue.current);
+      }
+      const w = puzzle.width;
+      setHoverRow(Math.floor(idx / w));
+      setHoverCol(idx % w);
     };
     document.addEventListener("mouseup", handleUp);
-    return () => document.removeEventListener("mouseup", handleUp);
+    document.addEventListener("mousemove", handleMove);
+    return () => {
+      document.removeEventListener("mouseup", handleUp);
+      document.removeEventListener("mousemove", handleMove);
+    };
   }, []);
 
-  const AXIS_LOCK_THRESHOLD = 5;
+  const AXIS_LOCK_THRESHOLD = 3;
 
-  // After accumulating cells, check if they all share a row or column; if 5+, lock.
+  // After accumulating cells, check if they all share a row or column; if 3+, lock.
   function checkAxisLock() {
     const cells = dragCells.current;
     if (lockedAxis.current || cells.length < AXIS_LOCK_THRESHOLD) return;
@@ -212,6 +258,7 @@ export default function NonogramPlayer(props: {
     dragCells.current = [idx];
     lockedAxis.current = null;
     lockedLine.current = -1;
+    lastMouseIdx.current = idx;
     const cur = stateRef.current[idx];
     const newVal = resolveNewState(cur, button);
     paintValue.current = newVal;
@@ -223,14 +270,6 @@ export default function NonogramPlayer(props: {
     queueMove(idx, newVal);
   }
 
-  // Mouse enters cell while dragging: paint with same value
-  function onCellEnter(idx: number) {
-    if (!dragging.current || props.readonly || solved || moveLimited) return;
-    idx = snapToAxis(idx);
-    dragCells.current.push(idx);
-    checkAxisLock();
-    applyCell(idx, paintValue.current);
-  }
 
   function flushMoves() {
     if (flushTimer.current) { clearTimeout(flushTimer.current); flushTimer.current = null; }
@@ -587,7 +626,6 @@ export default function NonogramPlayer(props: {
                   onMouseEnter={() => {
                     setHoverRow(it.row);
                     setHoverCol(it.col);
-                    onCellEnter(it.idx);
                   }}
                 />
               );
