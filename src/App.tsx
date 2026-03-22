@@ -577,9 +577,7 @@ function PrivacyPolicy() {
         </ul>
 
       </div>
-      <div className="gap-above">
-        <button className="btn" onClick={() => history.back()}>&larr; Back</button>
-      </div>
+      <BackButton />
     </div>
   );
 }
