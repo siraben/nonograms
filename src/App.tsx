@@ -254,13 +254,27 @@ export default function App() {
     })();
   }, []);
 
+  // Notify user when connection drops (unless actively playing a game)
+  const prevOnline = useRef(online);
+  useEffect(() => {
+    if (prevOnline.current && !online && route.name !== "play" && route.name !== "offline-play") {
+      setToast({ kind: "info", msg: "You're offline — switching to offline mode" });
+    }
+    if (!prevOnline.current && online && route.name !== "play") {
+      setToast({ kind: "ok", msg: "Back online" });
+    }
+    prevOnline.current = online;
+  }, [online]);
+
   const authedRoute = useMemo(() => {
     if (busy) return route;
     if (!user && route.name !== "login" && route.name !== "register" && route.name !== "offline-play" && route.name !== "replay" && route.name !== "privacy") return { name: "login" } as Route;
     if (user && (route.name === "login" || route.name === "register")) return { name: "home" } as Route;
     if (route.name === "admin" && (!user || !user.isAdmin)) return { name: "home" } as Route;
+    // When offline, redirect network-dependent routes to home (but let in-progress games continue)
+    if (!online && (route.name === "my-games" || route.name === "admin")) return { name: "home" } as Route;
     return route;
-  }, [busy, route, user]);
+  }, [busy, route, user, online]);
 
   async function doLogout() {
     await Auth.logout();
