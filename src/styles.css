@@ -312,6 +312,7 @@ a {
 .pagination {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
 }
 
@@ -735,6 +736,7 @@ a {
   place-items: center;
   z-index: 100;
   padding: 16px;
+  overflow: hidden;
 }
 
 .modal {
@@ -745,7 +747,8 @@ a {
   width: 100%;
   max-width: 440px;
   max-height: 80vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-head {
@@ -777,6 +780,8 @@ a {
 
 .modal-body {
   padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal-body h3 {
