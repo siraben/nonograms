@@ -9,7 +9,7 @@ import { useOnline } from "./useOnline";
 import { genPuzzle } from "../functions/lib/puzzle";
 import { randomU32 } from "../functions/lib/rng";
 import { Sun, Moon, CircleHelp, Share, Link, ChevronLeft, ChevronRight, SkipBack, Play as PlayIcon, Pause } from "lucide-react";
-import { Modal, Pagination, BackButton, CardHeader } from "./ui";
+import { Modal, Pagination, BackButton, CardHeader, LoadingState, EmptyState } from "./ui";
 
 type Route =
   | { name: "login" }
@@ -27,6 +27,14 @@ function fmtTime(iso: string): string {
     year: "numeric", month: "short", day: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
+}
+
+function fmtDuration(ms: number): string {
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
+function fmtDuration1(ms: number): string {
+  return `${(ms / 1000).toFixed(1)}s`;
 }
 
 function parseRoute(): Route {
@@ -432,7 +440,7 @@ export default function App() {
       {toast && <div className={`toast ${toast.kind}`}>{toast.msg}</div>}
 
       {busy && route.name !== "login" && route.name !== "register" && route.name !== "offline-play" && route.name !== "replay" && route.name !== "privacy" && (
-        <div className="card"><div className="muted">Loading...</div></div>
+        <div className="card"><LoadingState /></div>
       )}
 
       {authedRoute.name === "login" && (
@@ -564,7 +572,7 @@ function ChangePasswordModal(props: {
 function PrivacyPolicy() {
   return (
     <div className="card card-narrow">
-      <h2>Privacy Policy</h2>
+      <CardHeader title="Privacy Policy" />
       <div className="help-text">
         <p><strong>What we store</strong></p>
         <ul>
@@ -573,19 +581,19 @@ function PrivacyPolicy() {
           <li>Your puzzle attempts, moves, and solve times</li>
         </ul>
 
-        <p style={{ marginTop: 12 }}><strong>What we don't store</strong></p>
+        <p className="mt-12"><strong>What we don't store</strong></p>
         <ul>
           <li>Your IP address is not stored in our database. During registration, it is passed to Cloudflare Turnstile for captcha verification but is not retained by us.</li>
           <li>No cookies are used for tracking. The only stored credential is a session token in localStorage.</li>
           <li>No analytics or third-party tracking scripts are loaded.</li>
         </ul>
 
-        <p style={{ marginTop: 12 }}><strong>Hosting</strong></p>
+        <p className="mt-12"><strong>Hosting</strong></p>
         <ul>
           <li>This site is hosted on Cloudflare Pages. Cloudflare may collect standard web server logs (IP addresses, request timestamps) as part of their infrastructure. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>Cloudflare's privacy policy</a>.</li>
         </ul>
 
-        <p style={{ marginTop: 12 }}><strong>Data deletion</strong></p>
+        <p className="mt-12"><strong>Data deletion</strong></p>
         <ul>
           <li>Contact the site administrator to request deletion of your account and all associated data.</li>
         </ul>
@@ -681,7 +689,7 @@ function AuthCard(props: {
 
   return (
     <div className="card card-narrow">
-      <h2>{props.mode === "login" ? "Login" : "Register"}</h2>
+      <CardHeader title={props.mode === "login" ? "Login" : "Register"} />
       <form onSubmit={submit}>
         <div className="field">
           <label>Username</label>
@@ -755,7 +763,7 @@ function AuthCard(props: {
       </form>
       <div className="offline-promo">
         <div className="hint">Or play offline without an account:</div>
-        <div className="btn-group" style={{ marginTop: 6 }}>
+        <div className="btn-group mt-6">
           <button type="button" className="btn sm" onClick={() => nav("/offline/5")}>
             5x5
           </button>
@@ -808,25 +816,25 @@ function PublicLeaderboard() {
   return (
     <>
       <div className="card">
-        <h2>Weekly Leaderboard</h2>
-        <div className="btn-group" style={{ marginBottom: 8 }}>
+        <CardHeader title="Weekly Leaderboard" />
+        <div className="btn-group mb-8">
           <button className={`btn sm${tab === "5" ? " primary" : ""}`} onClick={() => setTab("5")}>5x5</button>
           <button className={`btn sm${tab === "10" ? " primary" : ""}`} onClick={() => setTab("10")}>10x10</button>
           <button className={`btn sm${tab === "15" ? " primary" : ""}`} onClick={() => setTab("15")}>15x15</button>
           <button className={`btn sm${tab === "20" ? " primary" : ""}`} onClick={() => setTab("20")}>20x20</button>
         </div>
         {loading ? (
-          <div className="muted">Loading...</div>
+          <LoadingState />
         ) : entries.length === 0 ? (
-          <div className="muted" style={{ textAlign: "center" }}>Sign up to be the first!</div>
+          <div className="muted text-center">Sign up to be the first!</div>
         ) : (
           <div className="list">
             {entries.map((e, i) => (
               <div key={i} className="item">
                 <div className="title">
                   {medal(i)} {e.username}
-                  <span className="muted" style={{ marginLeft: 8 }}>
-                    {(e.durationMs / 1000).toFixed(2)}s
+                  <span className="muted ml-8">
+                    {fmtDuration(e.durationMs)}
                   </span>
                 </div>
                 <div className="meta">{fmtTime(e.finishedAt)}</div>
@@ -840,7 +848,7 @@ function PublicLeaderboard() {
               </div>
             ))}
             <div className="item blurred-item" role="button" tabIndex={0} onClick={() => setSignupPrompt(true)}>
-              <div className="title">#4 Mysterious Player <span className="muted" style={{ marginLeft: 8 }}>??:??s</span></div>
+              <div className="title">#4 Mysterious Player <span className="muted ml-8">??:??s</span></div>
               <div className="meta">Sign up to see more</div>
             </div>
           </div>
@@ -851,7 +859,7 @@ function PublicLeaderboard() {
           <p className="help-text">
             Create an account to play online puzzles, compete on the leaderboard, and watch replays.
           </p>
-          <div className="btn-group" style={{ marginTop: 12 }}>
+          <div className="btn-group mt-12">
             <button className="btn primary" onClick={() => { setSignupPrompt(false); nav("/register"); }}>Register</button>
             <button className="btn" onClick={() => { setSignupPrompt(false); nav("/login"); }}>Login</button>
           </div>
@@ -1021,9 +1029,9 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
                 <Pagination page={page} onPageChange={setPage} totalPages={totalPages} />
               </CardHeader>
               {loading ? (
-                <div className="muted">Loading...</div>
+                <LoadingState />
               ) : entries.length === 0 ? (
-                <div className="muted">No runs yet. Be the first!</div>
+                <EmptyState>No runs yet. Be the first!</EmptyState>
               ) : (
                 <div className="list">
                   {pageEntries.map((e, i) => {
@@ -1031,10 +1039,10 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
                     return (
                     <div key={e.attemptId} className="item">
                       <div className="title">
-                        <span style={{ marginRight: 6 }}>{rank < 3 ? ["\u{1F947}", "\u{1F948}", "\u{1F949}"][rank] : `#${rank + 1}`}</span>
+                        <span className="mr-6">{rank < 3 ? ["\u{1F947}", "\u{1F948}", "\u{1F949}"][rank] : `#${rank + 1}`}</span>
                         {e.username}
-                        <span className="muted" style={{ marginLeft: 8 }}>
-                          {(e.durationMs / 1000).toFixed(2)}s
+                        <span className="muted ml-8">
+                          {fmtDuration(e.durationMs)}
                         </span>
                       </div>
                       <div className="meta">
@@ -1095,7 +1103,7 @@ function OfflinePlay(props: {
     <>
       <BackButton />
       <div className="card">
-        <h2>Offline</h2>
+        <CardHeader title="Offline" />
         <NonogramPlayer
           attemptId={`offline-${key}`}
           eligible={false}
@@ -1214,8 +1222,8 @@ function Play(props: {
     <>
       <BackButton />
       <div className="card">
-        <h2>Play</h2>
-        {loading && <div className="muted">Loading...</div>}
+        <CardHeader title="Play" />
+        {loading && <LoadingState />}
         {notStarted && dims && (
           <div className="start-gate">
             <div className="start-grid" style={{
@@ -1466,7 +1474,7 @@ function Replay(props: {
   async function copyReplayLink() {
     const url = `${location.origin}/#/replay/${props.attemptId}`;
     const size = puzzle ? `${puzzle.width}x${puzzle.height}` : "?x?";
-    const time = meta?.durationMs ? `${(meta.durationMs / 1000).toFixed(2)}s` : "?s";
+    const time = meta?.durationMs ? fmtDuration(meta.durationMs) : "?s";
     const who = isOwner ? "I" : (meta?.username ?? "Someone");
     const verb = isOwner ? "Try to beat my time or watch my replay" : "Watch the replay";
     const text = `${who} solved a ${size} nonogram in ${time}! ${verb} at ${url}`;
@@ -1502,7 +1510,7 @@ function Replay(props: {
     return (
       <>
         <BackButton />
-        <div className="card"><div className="muted">Loading...</div></div>
+        <div className="card"><LoadingState /></div>
       </>
     );
   }
@@ -1514,7 +1522,7 @@ function Replay(props: {
           <p className="help-text">
             If you watch this replay, your times for this puzzle won't count for the leaderboard.
           </p>
-          <div className="btn-group" style={{ marginTop: 12 }}>
+          <div className="btn-group mt-12">
             <button className="btn primary" onClick={() => { setShowConfirmModal(false); setConfirmed(true); }}>
               Watch anyway
             </button>
@@ -1557,7 +1565,7 @@ function Replay(props: {
         </CardHeader>
         {meta && (
           <div className="replay-meta">
-            <span>{(replayElapsed / 1000).toFixed(1)}s{meta.durationMs ? ` / ${(meta.durationMs / 1000).toFixed(1)}s` : ""}</span>
+            <span>{fmtDuration1(replayElapsed)}{meta.durationMs ? ` / ${fmtDuration1(meta.durationMs)}` : ""}</span>
             <span className="muted">{pos}/{moves.length} moves</span>
           </div>
         )}
@@ -1689,7 +1697,7 @@ function Replay(props: {
                       applyTo(i + 1);
                     }}
                   >
-                    <span className="tl-time">{(m.atMs / 1000).toFixed(1)}s</span>
+                    <span className="tl-time">{fmtDuration1(m.atMs)}</span>
                     <span className="tl-action">{action}</span>
                     <span className="tl-cell">r{r}c{c}</span>
                   </div>
@@ -1764,7 +1772,7 @@ function MyGames(props: { onToast: (t: Toast | null) => void }) {
             <Pagination page={page} onPageChange={setPage} hasMore={hasMore} />
           )}
         </CardHeader>
-        <label className="row muted realtime-toggle" style={{ marginBottom: 8 }}>
+        <label className="row muted realtime-toggle mb-8">
           <input
             type="checkbox"
             checked={hideAbandoned}
@@ -1773,21 +1781,21 @@ function MyGames(props: { onToast: (t: Toast | null) => void }) {
           Hide abandoned
         </label>
         {loading ? (
-          <div className="muted">Loading...</div>
+          <LoadingState />
         ) : games.length === 0 ? (
-          <div className="muted">No games yet. Start one from the home page!</div>
+          <EmptyState>No games yet. Start one from the home page!</EmptyState>
         ) : (
           <div className="list">
             {games.map((g) => (
               <div key={g.attemptId} className="item">
                 <div className="title">
                   {g.width}x{g.height}
-                  <span className="muted" style={{ marginLeft: 8 }}>
+                  <span className="muted ml-8">
                     {statusLabel(g.status)}
                   </span>
                   {g.status === "completed" && g.durationMs != null && (
-                    <span className="muted" style={{ marginLeft: 8 }}>
-                      {(g.durationMs / 1000).toFixed(2)}s
+                    <span className="muted ml-8">
+                      {fmtDuration(g.durationMs)}
                     </span>
                   )}
                 </div>
@@ -1932,7 +1940,7 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
           </button>
         </CardHeader>
         {loading ? (
-          <div className="muted">Loading...</div>
+          <LoadingState />
         ) : stats ? (
           <div className="admin-stats-grid">
             {([
@@ -1953,13 +1961,13 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
 
       {stats && stats.inProgressAttempts.length > 0 && (
         <div className="card">
-          <h2>In Progress</h2>
+          <CardHeader title="In Progress" />
           <div className="list">
             {stats.inProgressAttempts.map((a) => (
               <div key={a.attemptId} className="item">
                 <div className="title">
                   {a.username}
-                  <span className="muted" style={{ marginLeft: 8 }}>
+                  <span className="muted ml-8">
                     {a.width}x{a.height}
                   </span>
                 </div>
@@ -1977,7 +1985,7 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
               <Pagination page={signupPage} onPageChange={setSignupPage} totalPages={Math.max(1, Math.ceil(stats.recentSignups.length / ADMIN_PAGE_SIZE))} />
             </CardHeader>
             {stats.recentSignups.length === 0 ? (
-              <div className="muted">No signups yet</div>
+              <EmptyState>No signups yet</EmptyState>
             ) : (
               <div className="list">
                 {stats.recentSignups.slice(signupPage * ADMIN_PAGE_SIZE, (signupPage + 1) * ADMIN_PAGE_SIZE).map((u) => (
@@ -1995,15 +2003,15 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
               <Pagination page={completionPage} onPageChange={setCompletionPage} totalPages={Math.max(1, Math.ceil(stats.recentCompletions.length / ADMIN_PAGE_SIZE))} />
             </CardHeader>
             {stats.recentCompletions.length === 0 ? (
-              <div className="muted">No completions yet</div>
+              <EmptyState>No completions yet</EmptyState>
             ) : (
               <div className="list">
                 {stats.recentCompletions.slice(completionPage * ADMIN_PAGE_SIZE, (completionPage + 1) * ADMIN_PAGE_SIZE).map((c) => (
                   <div key={c.attemptId} className="item">
                     <div className="title">
                       {c.username}
-                      <span className="muted" style={{ marginLeft: 8 }}>
-                        {(c.durationMs / 1000).toFixed(2)}s
+                      <span className="muted ml-8">
+                        {fmtDuration(c.durationMs)}
                       </span>
                     </div>
                     <div className="meta">
@@ -2054,7 +2062,7 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
           </div>
         )}
         {invites.length === 0 ? (
-          <div className="muted gap-above">No invite codes</div>
+          <EmptyState className="gap-above">No invite codes</EmptyState>
         ) : (
           <div className="list gap-above">
             {invites.slice(invitePage * ADMIN_PAGE_SIZE, (invitePage + 1) * ADMIN_PAGE_SIZE).map((inv) => (
@@ -2062,9 +2070,9 @@ function AdminDashboard(props: { onToast: (t: Toast | null) => void }) {
                 <div style={{ flex: 1 }}>
                   <span className="title">
                     {inv.id.slice(0, 8)}
-                    {inv.disabled && <span className="muted" style={{ marginLeft: 6 }}>(disabled)</span>}
+                    {inv.disabled && <span className="muted ml-6">(disabled)</span>}
                   </span>
-                  <span className="meta" style={{ marginLeft: 8 }}>
+                  <span className="meta ml-8">
                     {inv.uses}{inv.maxUses != null ? `/${inv.maxUses}` : ""} uses &mdash; {fmtTime(inv.createdAt)}
                     {inv.expiresAt && <> &mdash; exp {fmtTime(inv.expiresAt)}</>}
                   </span>

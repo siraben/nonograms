@@ -9,6 +9,10 @@ function fmtTime(ms: number): string {
   return `${m}:${String(s % 60).padStart(2, "0")}`;
 }
 
+function fmtDuration(ms: number): string {
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
 function lineClue(bits: number[]): number[] {
   const out: number[] = [];
   let run = 0;
@@ -333,8 +337,7 @@ export default function NonogramPlayer(props: {
       if (progress.allCorrect) {
         stopTimer();
         setSolved(true);
-        const secs = (elapsed / 1000).toFixed(2);
-        props.onToast({ kind: "ok", msg: `Solved in ${secs}s (offline)` });
+        props.onToast({ kind: "ok", msg: `Solved in ${fmtDuration(elapsed)} (offline)` });
         props.onSolved?.();
       } else if (!auto) {
         props.onToast({ kind: "bad", msg: "Not solved yet" });
@@ -381,7 +384,7 @@ export default function NonogramPlayer(props: {
         stopTimer();
         setSolved(true);
         if (typeof r.durationMs === "number") setElapsed(r.durationMs);
-        const t = typeof r.durationMs === "number" ? ` in ${(r.durationMs / 1000).toFixed(2)}s` : "";
+        const t = typeof r.durationMs === "number" ? ` in ${fmtDuration(r.durationMs)}` : "";
         const el = r.eligible === false ? " (replay viewed \u2014 not on leaderboard)" : "";
         props.onToast({ kind: "ok", msg: `Solved${t}${el}` });
         props.onSolved?.();
@@ -561,7 +564,7 @@ export default function NonogramPlayer(props: {
       )}
 
       {!props.readonly && !props.offline && !props.eligible && (
-        <div className="hint" style={{ textAlign: "center" }}>(not ranked)</div>
+        <div className="hint text-center">(not ranked)</div>
       )}
 
       {!props.readonly && (
