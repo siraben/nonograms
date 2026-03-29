@@ -177,7 +177,7 @@ a {
 .btn.sm {
   font-size: 12px;
   padding: 0 10px;
-  height: 32px;
+  height: 36px;
 }
 
 .btn.lg {
@@ -339,6 +339,34 @@ a {
   }
 }
 
+@media (max-width: 768px) {
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn.sm {
+    min-height: 44px;
+  }
+
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .modal-close {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .field input,
+  .input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+
 @media (max-width: 540px) {
   .leaderboard-cols > .card {
     flex: 1 0 260px;
@@ -381,6 +409,47 @@ a {
 
   .nonogram {
     border-radius: var(--radius-sm);
+  }
+
+  .brand h1 {
+    font-size: 20px;
+  }
+
+  .leaderboard-cols > .card {
+    flex: 1 0 240px;
+    min-width: 240px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  .shell {
+    padding: 8px 10px 32px;
+  }
+}
+
+@media (max-width: 375px) {
+  :root {
+    --cell-size: 20px;
+  }
+
+  .brand h1 {
+    font-size: 18px;
+  }
+
+  .btn.lg {
+    font-size: 15px;
+    padding: 12px 20px;
+  }
+
+  .btn.start-btn {
+    font-size: 16px;
+    padding: 12px 24px;
+  }
+
+  .shell {
+    padding: 6px 8px 24px;
   }
 }
 
@@ -433,8 +502,8 @@ a {
 }
 
 .icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   display: inline-grid;
   place-items: center;
@@ -738,6 +807,7 @@ a {
   place-items: center;
   z-index: 100;
   padding: 16px;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   overflow: hidden;
 }
 

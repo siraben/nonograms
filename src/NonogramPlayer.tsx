@@ -578,7 +578,7 @@ export default function NonogramPlayer(props: {
           <div
             ref={gridRef}
             className={`nonogram${!props.readonly ? " interactive" : ""}`}
-            style={{ gridTemplateColumns, gridTemplateRows, ...((puzzle.width >= 20 || puzzle.height >= 20) ? { "--cell-size": "24px", "--cell-min": "16px" } as React.CSSProperties : {}) }}
+            style={{ gridTemplateColumns, gridTemplateRows, ...((puzzle.width >= 20 || puzzle.height >= 20) ? { "--cell-size": "24px", "--cell-min": "16px" } as React.CSSProperties : (puzzle.width <= 5 && puzzle.height <= 5) ? { "--cell-size": "40px", "--cell-min": "32px" } as React.CSSProperties : {}) }}
             onMouseLeave={() => {
               setHoverRow(-1);
               setHoverCol(-1);
