@@ -9,7 +9,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   const attemptId = String(params.id || "");
 
   const upd = await env.DB.prepare(
-    "UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ? AND user_id = ? AND completed = 0 AND started_at IS NOT NULL"
+    `UPDATE attempts SET completed = 1, eligible = 0
+     WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0 AND started_at IS NOT NULL`
   )
     .bind(attemptId, authed.userId)
     .run();

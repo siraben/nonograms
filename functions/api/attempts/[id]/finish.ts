@@ -35,6 +35,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   if (a.completed === 1) return err(409, "attempt already finished");
   if (!a.startedAt) return err(409, "attempt not started");
 
+  const fence = await env.DB.prepare(
+    "UPDATE attempts SET finishing = 1 WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0"
+  ).bind(attemptId, authed.userId).run();
+  if ((fence.meta?.changes || 0) !== 1) return err(409, "attempt is already finishing");
+
+  let completed = false;
+  try {
+
   const width = a.width | 0;
   const height = a.height | 0;
   const n = width * height;
@@ -58,12 +66,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   const upd = await env.DB.prepare(
     `UPDATE attempts
      SET completed = 1, finished_at = ?, duration_ms = ?,
+         finishing = 0,
          eligible = CASE WHEN eligible = 0 THEN 0
                          WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
                          THEN 0
                          WHEN EXISTS(SELECT 1 FROM attempts WHERE user_id = ? AND puzzle_id = ? AND id != ? AND started_at IS NOT NULL)
                          THEN 0 ELSE eligible END
-     WHERE id = ? AND completed = 0`
+     WHERE id = ? AND completed = 0 AND finishing = 1`
   ).bind(
     now.toISOString(),
     durationMs,
@@ -76,10 +85,18 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   ).run();
 
   if ((upd.meta?.changes || 0) !== 1) return err(409, "attempt already finished");
+  completed = true;
 
   // Read back the final eligible value set by the atomic UPDATE.
   const final = await env.DB.prepare("SELECT eligible FROM attempts WHERE id = ?")
     .bind(attemptId).first<{ eligible: number }>();
 
   return json({ solved: true, durationMs, eligible: final?.eligible === 1 });
+  } finally {
+    if (!completed) {
+      await env.DB.prepare(
+        "UPDATE attempts SET finishing = 0 WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 1"
+      ).bind(attemptId, authed.userId).run();
+    }
+  }
 };

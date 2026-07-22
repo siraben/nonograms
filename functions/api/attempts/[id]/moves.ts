@@ -79,8 +79,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     seq++;
     stmts.push(
       env.DB.prepare(
-        "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-      ).bind(attemptId, seq, m.atMs, m.idx, m.state, now)
+        `INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at)
+         SELECT ?, ?, ?, ?, ?, ?
+         WHERE EXISTS (
+           SELECT 1 FROM attempts
+           WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0
+         )`
+      ).bind(attemptId, seq, m.atMs, m.idx, m.state, now, attemptId, authed.userId)
     );
   }
 
@@ -88,7 +93,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     stmts.push(env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId));
   }
 
-  await env.DB.batch(stmts);
+  const results = await env.DB.batch(stmts);
+  const inserted = results.slice(0, movesToInsert.length)
+    .reduce((count, result) => count + (result.meta?.changes || 0), 0);
+  if (movesToInsert.length > 0 && inserted === 0) return err(409, "attempt is no longer writable");
 
   if (abandoned) {
     return json({ ok: true, abandoned: true, moveCount: MAX_MOVES });

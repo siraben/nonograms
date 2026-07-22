@@ -56,15 +56,21 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
 
   const stmts: D1PreparedStatement[] = [
     env.DB.prepare(
-      "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-    ).bind(attemptId, maxSeq + 1, atMs, idx, st, now.toISOString()),
+      `INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at)
+       SELECT ?, ?, ?, ?, ?, ?
+       WHERE EXISTS (
+         SELECT 1 FROM attempts
+         WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0
+       )`
+    ).bind(attemptId, maxSeq + 1, atMs, idx, st, now.toISOString(), attemptId, authed.userId),
   ];
 
   if (isLastMove) {
     stmts.push(env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId));
   }
 
-  await env.DB.batch(stmts);
+  const results = await env.DB.batch(stmts);
+  if ((results[0]?.meta?.changes || 0) !== 1) return err(409, "attempt is no longer writable");
 
   if (isLastMove) {
     return json({ ok: true, abandoned: true, atMs });
