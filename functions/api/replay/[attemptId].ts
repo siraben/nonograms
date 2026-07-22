@@ -34,10 +34,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
 
   if (!a) return err(404, "replay not found");
 
-  // Access control: owner or logged-in user always allowed; unauthenticated only if shared
+  // Access control: only the owner can view an unshared replay.
   const authed = await getSession(env, request);
   const isOwner = authed?.userId === a.userId;
-  if (!authed && !a.shared) return err(404, "replay not found");
+  if (!isOwner && !a.shared) return err(404, "replay not found");
 
   const moves = await env.DB.prepare(
     "SELECT seq, at_ms as atMs, idx, state FROM attempt_moves WHERE attempt_id = ? ORDER BY seq ASC, id ASC"
