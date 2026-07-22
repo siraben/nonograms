@@ -58,7 +58,11 @@ export function getCookie(req: Request, name: string): string | null {
     if (eq === -1) continue;
     const k = p.slice(0, eq);
     if (k !== name) continue;
-    return decodeURIComponent(p.slice(eq + 1));
+    try {
+      return decodeURIComponent(p.slice(eq + 1));
+    } catch {
+      return null;
+    }
   }
   return null;
 }
