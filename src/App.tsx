@@ -257,6 +257,8 @@ export default function App() {
     (async () => {
       try {
         setUser(await Auth.me());
+      } catch {
+        setToast({ kind: "bad", msg: "Couldn't reach the server to restore your session" });
       } finally {
         setBusy(false);
       }
@@ -286,9 +288,13 @@ export default function App() {
   }, [busy, route, user, online]);
 
   async function doLogout() {
-    await Auth.logout();
-    setUser(null);
-    nav("/login");
+    try {
+      await Auth.logout();
+      setUser(null);
+      nav("/login");
+    } catch (err) {
+      setToast({ kind: "bad", msg: `Couldn't log out: ${(err as Error).message}` });
+    }
   }
 
   return (
