@@ -895,6 +895,7 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
   const [leader15, setLeader15] = useState<LeaderboardEntry[]>([]);
   const [leader20, setLeader20] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leaderboardError, setLeaderboardError] = useState(false);
   const [period, setPeriod] = useState<Period>(() => {
     const saved = localStorage.getItem("leaderboard-period");
     return saved === "day" || saved === "week" || saved === "month" || saved === "all" ? saved : "day";
@@ -935,10 +936,14 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
         setLeader10(data.leaderboard10);
         setLeader15(data.leaderboard15);
         setLeader20(data.leaderboard20);
+        setLeaderboardError(false);
         setLoading(false);
         requestAnimationFrame(updateScrollHints);
       } catch {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLeaderboardError(true);
+          setLoading(false);
+        }
       }
     };
     setLoading(true);
@@ -1047,6 +1052,8 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
               </CardHeader>
               {loading ? (
                 <LoadingState />
+              ) : leaderboardError ? (
+                <EmptyState>Leaderboard temporarily unavailable.</EmptyState>
               ) : entries.length === 0 ? (
                 <EmptyState>No runs yet. Be the first!</EmptyState>
               ) : (

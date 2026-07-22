@@ -1,7 +1,6 @@
 import type { Env } from "../../lib/auth";
 import { requireUser } from "../../lib/auth";
 import { json } from "../../lib/http";
-import { computeAndCacheKdePaths } from "../../lib/kde-cache";
 
 const PAGE_SIZE = 10;
 
@@ -45,12 +44,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
 
   const hasMore = rows.results.length > PAGE_SIZE;
   const items = rows.results.slice(0, PAGE_SIZE);
-
-  await computeAndCacheKdePaths(
-    env.DB,
-    items
-      .filter((r) => r.completed === 1 && r.finishedAt !== null && r.durationMs !== null)
-  );
 
   const games = items.map((r) => {
     let status: "in_progress" | "completed" | "abandoned";

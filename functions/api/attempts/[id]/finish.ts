@@ -3,6 +3,7 @@ import { requireUser } from "../../../lib/auth";
 import { err, json } from "../../../lib/http";
 import { validateStateByClues } from "../../../lib/nonogram";
 import { materializeState } from "../../../lib/state";
+import { computeKdePath } from "../../../../lib/kde";
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }) => {
   const authed = await requireUser(env, request);
@@ -62,10 +63,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     return json({ solved: false, wrongRows: v.wrongRows, wrongCols: v.wrongCols });
   }
 
+  const moveTimes = await env.DB.prepare(
+    "SELECT at_ms as atMs FROM attempt_moves WHERE attempt_id = ? ORDER BY seq ASC, id ASC"
+  ).bind(attemptId).all<{ atMs: number }>();
+  const atMs = moveTimes.results.map((move) => move.atMs);
+  const kdePath = atMs.length >= 2 ? computeKdePath(atMs, durationMs) : "";
+
   // Compute eligibility atomically to avoid TOCTTOU race with concurrent replay views.
   const upd = await env.DB.prepare(
     `UPDATE attempts
-     SET completed = 1, finished_at = ?, duration_ms = ?,
+     SET completed = 1, finished_at = ?, duration_ms = ?, kde_path = ?,
          finishing = 0,
          eligible = CASE WHEN eligible = 0 THEN 0
                          WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
@@ -76,6 +83,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   ).bind(
     now.toISOString(),
     durationMs,
+    kdePath,
     authed.userId,
     a.puzzleId,
     authed.userId,

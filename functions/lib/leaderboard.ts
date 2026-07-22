@@ -1,5 +1,3 @@
-import { computeAndCacheKdePaths } from "./kde-cache";
-
 export type LeaderboardRow = {
   attemptId: string;
   puzzleId: string;
@@ -80,10 +78,6 @@ export async function queryLeaderboard(db: D1Database, size: number | null, cuto
      ORDER BY a.duration_ms ASC
      LIMIT ?3`
   ).bind(size, cutoff, limit).all<LeaderboardDbRow>();
-
-  if (rows.results.length === 0) return rows;
-
-  await computeAndCacheKdePaths(db, rows.results);
 
   return {
     ...rows,
