@@ -10,10 +10,38 @@ export function err(status: number, message: string): Response {
   return json({ error: message }, { status });
 }
 
+const MAX_JSON_BYTES = 64 * 1024;
+
 export async function readJson<T>(req: Request): Promise<T> {
   const ct = req.headers.get("content-type") || "";
   if (!ct.includes("application/json")) throw new Error("expected application/json");
-  return (await req.json()) as T;
+  const declaredLength = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_JSON_BYTES) {
+    throw new Error("request body too large");
+  }
+  if (!req.body) throw new Error("missing request body");
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_JSON_BYTES) {
+      await reader.cancel("request body too large");
+      throw new Error("request body too large");
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(bytes)) as T;
 }
 
 export function getCookie(req: Request, name: string): string | null {
@@ -49,4 +77,3 @@ export function setCookieHeader(opts: {
   if (opts.expires) parts.push(`Expires=${opts.expires.toUTCString()}`);
   return parts.join("; ");
 }
-
