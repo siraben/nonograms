@@ -623,6 +623,7 @@ function AuthCard(props: {
   const [submitting, setSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaReady, setCaptchaReady] = useState(false);
+  const [captchaLoadError, setCaptchaLoadError] = useState(false);
   const [loginCaptchaRequired, setLoginCaptchaRequired] = useState(false);
   const [captchaCycle, setCaptchaCycle] = useState(0);
 
@@ -634,13 +635,18 @@ function AuthCard(props: {
 
     let cancelled = false;
     let widgetId: string | null = null;
+    const deadline = Date.now() + 5_000;
 
     const tryRender = () => {
       if (cancelled) return;
       const t = getTurnstile();
       const el = document.getElementById("turnstile");
       if (!t || !el) {
-        window.setTimeout(tryRender, 50);
+        if (Date.now() < deadline) {
+          window.setTimeout(tryRender, 50);
+        } else {
+          setCaptchaLoadError(true);
+        }
         return;
       }
       el.innerHTML = "";
@@ -662,6 +668,7 @@ function AuthCard(props: {
 
     setCaptchaToken("");
     setCaptchaReady(false);
+    setCaptchaLoadError(false);
     tryRender();
 
     return () => {
@@ -750,6 +757,9 @@ function AuthCard(props: {
               Captcha disabled in dev
             </div>
           )
+        )}
+        {captchaLoadError && (
+          <div className="hint gap-below">Captcha failed to load. Check your connection or content blocker, then reload.</div>
         )}
         {props.mode === "login" && (
           <label className="row muted remember-field">
