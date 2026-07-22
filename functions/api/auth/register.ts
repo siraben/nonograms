@@ -38,7 +38,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   if (exists) return err(409, "username taken");
 
   // Enforce invite codes by default (friends-only). Set INVITES_REQUIRED=0 to allow open registration.
-  // Validate + consume invite code after username check to avoid wasting codes on duplicate usernames.
+  // Validate the invite after the username check. A database trigger consumes it
+  // in the same statement as the user INSERT, so any INSERT failure rolls back use.
   let inviteCodeId: string | null = null;
   if (env.INVITES_REQUIRED !== "0") {
     const code = (body.inviteCode || "").trim();
@@ -62,13 +63,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     }
     if (!found) return err(403, "invalid invite code");
 
-    // Atomic-ish consume: guard max_uses inside the update.
-    const upd = await env.DB.prepare(
-      "UPDATE invite_codes SET uses = uses + 1 WHERE id = ? AND disabled = 0 AND (expires_at IS NULL OR expires_at > ?) AND (max_uses IS NULL OR uses < max_uses)"
-    )
-      .bind(found.id, nowIso)
-      .run();
-    if ((upd.meta?.changes || 0) !== 1) return err(403, "invite code exhausted");
     inviteCodeId = found.id;
   }
 
@@ -84,6 +78,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
       .run();
   } catch (e) {
     const msg = String(e);
+    if (msg.includes("invite code exhausted")) return err(403, "invite code exhausted");
     if (msg.includes("UNIQUE") || msg.includes("unique")) return err(409, "username taken");
     throw e;
   }
