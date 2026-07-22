@@ -7,6 +7,12 @@ import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure } from "../
 
 type Body = { username: string; password: string; remember?: boolean; captchaToken?: string };
 
+const DUMMY_PASSWORD_RECORD = {
+  salt: "AAAAAAAAAAAAAAAAAAAAAA==",
+  hash: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  iters: 100_000,
+};
+
 export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const setCookieOld = await destroySession(env, request);
 
@@ -48,13 +54,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     .bind(username)
     .first<{ id: string; salt: string; hash: string; iters: number }>();
 
-  if (!row) {
-    await recordLoginFailure(env.DB, limit.keys);
-    return err(401, "invalid username/password");
-  }
-
-  const ok = await verifyPassword(password, row.salt, row.hash, row.iters);
-  if (!ok) {
+  const passwordRecord = row || DUMMY_PASSWORD_RECORD;
+  const ok = await verifyPassword(password, passwordRecord.salt, passwordRecord.hash, passwordRecord.iters);
+  if (!row || !ok) {
     await recordLoginFailure(env.DB, limit.keys);
     return err(401, "invalid username/password");
   }
