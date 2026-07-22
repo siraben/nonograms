@@ -1,6 +1,6 @@
 import type { Env } from "../../../lib/auth";
 import { requireUser } from "../../../lib/auth";
-import { err, json, readJson } from "../../../lib/http";
+import { err, isJsonObject, json, readJson } from "../../../lib/http";
 import { MAX_MOVES } from "../../../lib/limits";
 
 type Move = { idx: number; state: number; atMs: number };
@@ -15,7 +15,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   const attemptId = String(params.id || "");
   let body: Body;
   try {
-    body = await readJson<Body>(request);
+    body = await readJson<Body>(request, (value): value is Body =>
+      isJsonObject(value) && Array.isArray(value.moves) && value.moves.every((move) =>
+        isJsonObject(move) &&
+        typeof move.idx === "number" && Number.isFinite(move.idx) &&
+        typeof move.state === "number" && Number.isFinite(move.state) &&
+        typeof move.atMs === "number" && Number.isFinite(move.atMs)
+      )
+    );
   } catch {
     return err(400, "bad json");
   }

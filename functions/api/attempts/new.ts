@@ -1,6 +1,6 @@
 import type { Env } from "../../lib/auth";
 import { requireUser } from "../../lib/auth";
-import { err, json, readJson } from "../../lib/http";
+import { err, isJsonObject, json, readJson } from "../../lib/http";
 import { genPuzzle } from "../../lib/puzzle";
 import { randomPuzzleSeed } from "../../lib/rng";
 
@@ -12,11 +12,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const authed = await requireUser(env, request);
   if (authed instanceof Response) return authed;
 
-  let body: Body = {};
+  let body: Body;
   try {
-    body = await readJson<Body>(request);
+    body = await readJson<Body>(request, (value): value is Body =>
+      isJsonObject(value) &&
+      (value.puzzleId === undefined || typeof value.puzzleId === "string") &&
+      (value.size === undefined || (typeof value.size === "number" && Number.isFinite(value.size)))
+    );
   } catch {
-    // ok: default
+    return err(400, "bad json");
   }
 
   const now = new Date().toISOString();

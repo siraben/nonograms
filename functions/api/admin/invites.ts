@@ -1,6 +1,6 @@
 import type { Env } from "../../lib/auth";
 import { requireUser } from "../../lib/auth";
-import { err, json, readJson } from "../../lib/http";
+import { err, isJsonObject, json, readJson } from "../../lib/http";
 import { randomInviteCode, sha256Hex } from "../../lib/crypto";
 
 function mask(code: string): string {
@@ -32,9 +32,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   let body: CreateBody = {};
   try {
-    body = await readJson<CreateBody>(request);
+    body = await readJson<CreateBody>(request, (value): value is CreateBody =>
+      isJsonObject(value) &&
+      (value.code === undefined || typeof value.code === "string") &&
+      (value.maxUses === undefined || (typeof value.maxUses === "number" && Number.isFinite(value.maxUses))) &&
+      (value.expiresInDays === undefined || (typeof value.expiresInDays === "number" && Number.isFinite(value.expiresInDays)))
+    );
   } catch {
-    // ok
+    return err(400, "bad json");
   }
 
   const code = (body.code || "").trim() || randomInviteCode();
@@ -72,7 +77,9 @@ export const onRequestPut: PagesFunction<Env> = async ({ env, request }) => {
 
   let body: DisableBody;
   try {
-    body = await readJson<DisableBody>(request);
+    body = await readJson<DisableBody>(request, (value): value is DisableBody =>
+      isJsonObject(value) && typeof value.id === "string"
+    );
   } catch {
     return err(400, "bad json");
   }
@@ -82,4 +89,3 @@ export const onRequestPut: PagesFunction<Env> = async ({ env, request }) => {
   await env.DB.prepare("UPDATE invite_codes SET disabled = 1 WHERE id = ?").bind(id).run();
   return json({ ok: true });
 };
-

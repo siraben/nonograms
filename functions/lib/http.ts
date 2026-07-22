@@ -12,7 +12,11 @@ export function err(status: number, message: string): Response {
 
 const MAX_JSON_BYTES = 64 * 1024;
 
-export async function readJson<T>(req: Request): Promise<T> {
+export function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export async function readJson<T>(req: Request, validate: (value: unknown) => value is T): Promise<T> {
   const ct = req.headers.get("content-type") || "";
   if (!ct.includes("application/json")) throw new Error("expected application/json");
   const declaredLength = Number(req.headers.get("content-length"));
@@ -41,7 +45,9 @@ export async function readJson<T>(req: Request): Promise<T> {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  return JSON.parse(new TextDecoder().decode(bytes)) as T;
+  const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
+  if (!validate(parsed)) throw new Error("invalid json shape");
+  return parsed;
 }
 
 export function getCookie(req: Request, name: string): string | null {

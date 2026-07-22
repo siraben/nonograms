@@ -1,6 +1,6 @@
 import type { Env } from "../../lib/auth";
 import { createSession, destroySession } from "../../lib/auth";
-import { err, json, readJson } from "../../lib/http";
+import { err, isJsonObject, json, readJson } from "../../lib/http";
 import { hashPassword } from "../../lib/password";
 import { verifyTurnstile } from "../../lib/turnstile";
 import { sha256Hex } from "../../lib/crypto";
@@ -12,7 +12,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   let body: Body;
   try {
-    body = await readJson<Body>(request);
+    body = await readJson<Body>(request, (value): value is Body =>
+      isJsonObject(value) &&
+      typeof value.username === "string" &&
+      typeof value.password === "string" &&
+      (value.captchaToken === undefined || typeof value.captchaToken === "string") &&
+      (value.inviteCode === undefined || typeof value.inviteCode === "string")
+    );
   } catch {
     return err(400, "bad json");
   }

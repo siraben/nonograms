@@ -1,6 +1,6 @@
 import type { Env } from "../../lib/auth";
 import { requireUser, sessionIdHash } from "../../lib/auth";
-import { err, json, readJson } from "../../lib/http";
+import { err, isJsonObject, json, readJson } from "../../lib/http";
 import { hashPassword, verifyPassword } from "../../lib/password";
 
 type Body = { currentPassword: string; newPassword: string };
@@ -11,7 +11,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   let body: Body;
   try {
-    body = await readJson<Body>(request);
+    body = await readJson<Body>(request, (value): value is Body =>
+      isJsonObject(value) &&
+      typeof value.currentPassword === "string" &&
+      typeof value.newPassword === "string"
+    );
   } catch {
     return err(400, "bad json");
   }

@@ -1,6 +1,6 @@
 import type { Env } from "../../lib/auth";
 import { createSession, destroySession } from "../../lib/auth";
-import { err, json, readJson } from "../../lib/http";
+import { err, isJsonObject, json, readJson } from "../../lib/http";
 import { verifyPassword } from "../../lib/password";
 import { verifyTurnstile } from "../../lib/turnstile";
 import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure } from "../../lib/login-rate-limit";
@@ -18,7 +18,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   let body: Body;
   try {
-    body = await readJson<Body>(request);
+    body = await readJson<Body>(request, (value): value is Body =>
+      isJsonObject(value) &&
+      typeof value.username === "string" &&
+      typeof value.password === "string" &&
+      (value.remember === undefined || typeof value.remember === "boolean") &&
+      (value.captchaToken === undefined || typeof value.captchaToken === "string")
+    );
   } catch {
     return err(400, "bad json");
   }
