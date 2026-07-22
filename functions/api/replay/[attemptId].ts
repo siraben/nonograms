@@ -45,14 +45,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
     .bind(attemptId)
     .all<{ seq: number; atMs: number; idx: number; state: number }>();
 
-  // Mark that this user has viewed a replay for this puzzle (their times won't count for the leaderboard).
-  if (authed && !isOwner) {
-    const now = new Date().toISOString();
-    await env.DB.prepare("INSERT OR REPLACE INTO replay_views (user_id, puzzle_id, viewed_at) VALUES (?, ?, ?)")
-      .bind(authed.userId, a.puzzleId, now)
-      .run();
-  }
-
   return json({
     attempt: {
       id: a.attemptId,

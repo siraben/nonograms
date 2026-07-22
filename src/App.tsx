@@ -1513,6 +1513,18 @@ function Replay(props: {
     }
   }
 
+  async function acknowledgeReplay() {
+    try {
+      await api(`/api/replay/${encodeURIComponent(props.attemptId)}/view`, {
+        method: "POST",
+      });
+      setShowConfirmModal(false);
+      setConfirmed(true);
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    }
+  }
+
   if (checking) {
     return (
       <>
@@ -1530,7 +1542,7 @@ function Replay(props: {
             If you watch this replay, your times for this puzzle won't count for the leaderboard.
           </p>
           <div className="btn-group mt-12">
-            <button className="btn primary" onClick={() => { setShowConfirmModal(false); setConfirmed(true); }}>
+            <button className="btn primary" onClick={() => void acknowledgeReplay()}>
               Watch anyway
             </button>
             <button className="btn" onClick={() => { setShowConfirmModal(false); nav("/"); }}>
