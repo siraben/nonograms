@@ -18,11 +18,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   }
 
   const enc = new TextEncoder();
-  const a = enc.encode((body.token || "").trim());
-  const b = enc.encode(env.BOOTSTRAP_TOKEN);
-  if (a.byteLength !== b.byteLength || !crypto.subtle.timingSafeEqual(a, b)) return err(403, "invalid bootstrap token");
+  const [provided, expected] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode((body.token || "").trim())),
+    crypto.subtle.digest("SHA-256", enc.encode(env.BOOTSTRAP_TOKEN)),
+  ]);
+  if (!crypto.subtle.timingSafeEqual(provided, expected)) return err(403, "invalid bootstrap token");
 
-  await env.DB.prepare("UPDATE users SET is_admin = 1 WHERE id = ?").bind(authed.userId).run();
+  const promoted = await env.DB.prepare(
+    `UPDATE users SET is_admin = 1
+     WHERE id = ? AND NOT EXISTS (SELECT 1 FROM users WHERE is_admin = 1)`
+  ).bind(authed.userId).run();
+  if ((promoted.meta?.changes || 0) !== 1) return err(409, "bootstrap already completed");
+
   return json({ ok: true });
 };
-

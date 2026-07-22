@@ -104,6 +104,9 @@ curl -sS -X POST 'https://<your-domain>/api/admin/bootstrap' \
   --data '{"token":"<BOOTSTRAP_TOKEN>"}'
 ```
 
+The bootstrap endpoint succeeds only while the database has no administrator. Remove
+`BOOTSTRAP_TOKEN` from the Pages environment immediately after the promotion.
+
 Then create invite codes (admin only):
 
 ```sh
