@@ -1,5 +1,15 @@
 export type ApiError = { error: string };
 
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
+
 async function readJson(res: Response) {
   const text = await res.text();
   try {
@@ -25,8 +35,7 @@ export async function api<T>(
 
   if (!res.ok) {
     const data = (await readJson(res)) as ApiError | null;
-    throw new Error(data?.error || `HTTP ${res.status}`);
+    throw new ApiRequestError(data?.error || `HTTP ${res.status}`, res.status);
   }
   return (await readJson(res)) as T;
 }
-

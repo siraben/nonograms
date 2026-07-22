@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "./api";
+import { api, ApiRequestError } from "./api";
 import type { CellState, Puzzle, Toast } from "./types";
 import { MAX_MOVES } from "../functions/lib/limits";
 
@@ -75,6 +75,9 @@ export default function NonogramPlayer(props: {
   const pendingFlushes = useRef<Promise<unknown>[]>([]);
   const moveBuffer = useRef<{ idx: number; state: CellState; atMs: number }[]>([]);
   const flushTimer = useRef<number | null>(null);
+  const flushRetries = useRef(0);
+  const mounted = useRef(true);
+  const activeAttempt = useRef(props.attemptId);
   const startMs = useRef(0);
   const timerRef = useRef<number | null>(null);
   const dragging = useRef(false);
@@ -94,6 +97,7 @@ export default function NonogramPlayer(props: {
   });
 
   useEffect(() => {
+    activeAttempt.current = props.attemptId;
     setState(props.initialState);
     setSolved(false);
     setMoveLimited(false);
@@ -101,8 +105,21 @@ export default function NonogramPlayer(props: {
     autoFinishRetries.current = 0;
     moveCount.current = props.initialMoveCount ?? 0;
     moveBuffer.current = [];
+    flushRetries.current = 0;
     if (flushTimer.current) { clearTimeout(flushTimer.current); flushTimer.current = null; }
   }, [props.attemptId, props.initialState]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      moveBuffer.current = [];
+      if (flushTimer.current) {
+        clearTimeout(flushTimer.current);
+        flushTimer.current = null;
+      }
+    };
+  }, []);
 
   // Timer — starts immediately since startedAt is set at attempt creation
   useEffect(() => {
@@ -277,17 +294,21 @@ export default function NonogramPlayer(props: {
 
   function flushMoves() {
     if (flushTimer.current) { clearTimeout(flushTimer.current); flushTimer.current = null; }
+    if (!mounted.current || inFlight.current > 0) return;
     const all = moveBuffer.current;
     if (all.length === 0) return;
     // Server accepts at most 50 moves per request; keep the rest buffered.
     const batch = all.slice(0, 50);
     moveBuffer.current = all.slice(50);
+    const attemptId = props.attemptId;
     inFlight.current++;
     setSaving(true);
     const p = api<{ ok: boolean; abandoned?: boolean }>(
-      `/api/attempts/${encodeURIComponent(props.attemptId)}/moves`,
+      `/api/attempts/${encodeURIComponent(attemptId)}/moves`,
       { method: "POST", json: { moves: batch } }
     ).then((r) => {
+      if (!mounted.current || activeAttempt.current !== attemptId) return;
+      flushRetries.current = 0;
       if (r.abandoned) {
         setMoveLimited(true);
         moveBuffer.current = [];
@@ -298,16 +319,31 @@ export default function NonogramPlayer(props: {
       if (moveBuffer.current.length > 0 && !flushTimer.current) {
         flushTimer.current = window.setTimeout(flushMoves, 0);
       }
-    }).catch(() => {
-      // Put failed moves back at the front so they retry before newer moves.
+    }).catch((error: unknown) => {
+      if (!mounted.current || activeAttempt.current !== attemptId) return;
+      const permanent = error instanceof ApiRequestError && error.status >= 400 && error.status < 500;
+      if (permanent) {
+        moveBuffer.current = [];
+        flushRetries.current = 0;
+        props.onToast({ kind: "bad", msg: `Progress could not be saved: ${error.message}` });
+        return;
+      }
+
       moveBuffer.current = batch.concat(moveBuffer.current);
-      if (!flushTimer.current) {
-        flushTimer.current = window.setTimeout(flushMoves, 2000);
+      flushRetries.current++;
+      if (flushRetries.current > 5) {
+        moveBuffer.current = [];
+        props.onToast({ kind: "bad", msg: "Progress could not be saved after repeated network errors" });
+        return;
+      }
+      if (!flushTimer.current && mounted.current) {
+        const delay = Math.min(16_000, 1000 * (2 ** (flushRetries.current - 1)));
+        flushTimer.current = window.setTimeout(flushMoves, delay);
       }
     }).finally(() => {
       pendingFlushes.current = pendingFlushes.current.filter((x) => x !== p);
       inFlight.current--;
-      if (inFlight.current <= 0) setSaving(false);
+      if (mounted.current && activeAttempt.current === attemptId && inFlight.current <= 0) setSaving(false);
     });
     pendingFlushes.current.push(p);
   }
