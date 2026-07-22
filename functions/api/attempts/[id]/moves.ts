@@ -46,12 +46,18 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     if (idx < 0 || idx >= n) return err(400, "bad idx");
   }
 
-  const now = new Date().toISOString();
+  const nowDate = new Date();
+  const now = nowDate.toISOString();
+  const elapsedOnServer = Math.max(0, nowDate.getTime() - new Date(row.startedAt).getTime());
+  const maxAtMs = elapsedOnServer + 5_000;
 
-  // Sort moves by atMs so seq numbers reflect chronological order.
-  const sorted = body.moves
-    .map((m) => ({ idx: m.idx | 0, state: m.state | 0, atMs: Math.max(0, m.atMs | 0) }))
-    .sort((a, b) => a.atMs - b.atMs);
+  // Preserve request order. Client time is display metadata only and is bounded
+  // by server elapsed time before SQL makes it monotonic with accepted moves.
+  const sorted = body.moves.map((m) => ({
+    idx: m.idx | 0,
+    state: m.state | 0,
+    atMs: Math.min(maxAtMs, Math.max(0, Math.floor(Number(m.atMs)))),
+  }));
 
   // Each INSERT allocates its sequence in the same statement that writes the
   // move. D1 executes the batch transactionally, so concurrent flushes cannot
@@ -60,14 +66,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   for (const m of sorted) {
     stmts.push(
       env.DB.prepare(
-        `INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at)
+         `INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at)
          SELECT ?, COALESCE((SELECT MAX(seq) + 1 FROM attempt_moves WHERE attempt_id = ?), 1),
-                ?, ?, ?, ?
+                MIN(?, MAX(?, COALESCE((
+                  SELECT at_ms FROM attempt_moves WHERE attempt_id = ? ORDER BY seq DESC LIMIT 1
+                ), 0))), ?, ?, ?
          FROM attempts
          WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0
            AND (SELECT COUNT(*) FROM attempt_moves WHERE attempt_id = ?) < ?`
       ).bind(
-        attemptId, attemptId, m.atMs, m.idx, m.state, now,
+        attemptId, attemptId, maxAtMs, m.atMs, attemptId, m.idx, m.state, now,
         attemptId, authed.userId, attemptId, MAX_MOVES,
       )
     );
