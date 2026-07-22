@@ -1,5 +1,5 @@
 import type { Env } from "../../lib/auth";
-import { requireUser } from "../../lib/auth";
+import { requireUser, sessionIdHash } from "../../lib/auth";
 import { err, json, readJson } from "../../lib/http";
 import { hashPassword, verifyPassword } from "../../lib/password";
 
@@ -33,12 +33,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   if (!ok) return err(401, "current password is incorrect");
 
   const { saltB64, hashB64, iters } = await hashPassword(newPassword);
+  const currentSessionHash = await sessionIdHash(request);
+  if (!currentSessionHash) return err(401, "not logged in");
 
-  await env.DB.prepare(
-    "UPDATE users SET pass_salt_b64 = ?, pass_hash_b64 = ?, pass_iters = ? WHERE id = ?"
-  )
-    .bind(saltB64, hashB64, iters, authed.userId)
-    .run();
+  await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE users SET pass_salt_b64 = ?, pass_hash_b64 = ?, pass_iters = ? WHERE id = ?"
+    ).bind(saltB64, hashB64, iters, authed.userId),
+    env.DB.prepare(
+      "DELETE FROM sessions WHERE user_id = ? AND id != ?"
+    ).bind(authed.userId, currentSessionHash),
+  ]);
 
   return json({ ok: true });
 };
