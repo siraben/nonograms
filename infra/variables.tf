@@ -21,3 +21,8 @@ variable "d1_database_name" {
   default     = "nonogram-db"
 }
 
+variable "preview_d1_database_name" {
+  type        = string
+  description = "D1 database name used only by preview deployments"
+  default     = "nonogram-db-dev"
+}

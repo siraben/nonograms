@@ -16,6 +16,11 @@ resource "cloudflare_d1_database" "db" {
   name       = var.d1_database_name
 }
 
+resource "cloudflare_d1_database" "preview_db" {
+  account_id = var.cloudflare_account_id
+  name       = var.preview_d1_database_name
+}
+
 resource "cloudflare_pages_project" "site" {
   account_id        = var.cloudflare_account_id
   name              = var.pages_project_name
@@ -29,9 +34,8 @@ resource "cloudflare_pages_project" "site" {
     }
     preview = {
       d1_databases = {
-        DB = { id = cloudflare_d1_database.db.id }
+        DB = { id = cloudflare_d1_database.preview_db.id }
       }
     }
   }
 }
-
