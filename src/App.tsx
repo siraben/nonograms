@@ -578,14 +578,14 @@ function PrivacyPolicy() {
         <p><strong>What we store</strong></p>
         <ul>
           <li>Your username and a salted hash of your password (we never store your password in plain text)</li>
-          <li>Session tokens to keep you logged in</li>
+          <li>A one-way hash of your session token to keep you logged in</li>
           <li>Your puzzle attempts, moves, and solve times</li>
         </ul>
 
         <p className="mt-12"><strong>What we don't store</strong></p>
         <ul>
           <li>Your IP address is not stored directly. A one-way hash derived from it may be retained briefly to rate-limit login attempts, and it may be passed to Cloudflare Turnstile for captcha verification.</li>
-          <li>No cookies are used for tracking. The only stored credential is a session token in localStorage.</li>
+          <li>No cookies are used for tracking. Authentication uses an HttpOnly session cookie.</li>
           <li>No analytics or third-party tracking scripts are loaded.</li>
         </ul>
 
