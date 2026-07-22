@@ -3,7 +3,7 @@ import { createSession, destroySession } from "../../lib/auth";
 import { err, isJsonObject, json, readJson } from "../../lib/http";
 import { hashPassword } from "../../lib/password";
 import { verifyTurnstile } from "../../lib/turnstile";
-import { sha256Hex } from "../../lib/crypto";
+import { canonicalInviteCode, sha256Hex } from "../../lib/crypto";
 
 type Body = { username: string; password: string; captchaToken?: string; inviteCode?: string };
 
@@ -50,17 +50,28 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   // in the same statement as the user INSERT, so any INSERT failure rolls back use.
   let inviteCodeId: string | null = null;
   if (env.INVITES_REQUIRED !== "0") {
-    const code = (body.inviteCode || "").trim();
+    const rawCode = (body.inviteCode || "").trim();
+    const code = canonicalInviteCode(rawCode);
     if (!code) return err(403, "invite code required");
 
-    const hash = await sha256Hex(code);
+    // Include legacy spellings so codes created before canonicalization continue
+    // to redeem when users vary case or omit the generated hyphens.
+    const grouped = code.replace(/(.{4})/g, "$1-").replace(/-$/, "");
+    const hashes = await Promise.all([
+      sha256Hex(code),
+      sha256Hex(rawCode),
+      sha256Hex(rawCode.toUpperCase()),
+      sha256Hex(grouped),
+    ]);
     const nowIso = new Date().toISOString();
     let found: { id: string } | null = null;
     try {
       found = await env.DB.prepare(
-        "SELECT id FROM invite_codes WHERE code_hash_hex = ? AND disabled = 0 AND (expires_at IS NULL OR expires_at > ?)"
+        `SELECT id FROM invite_codes
+         WHERE code_hash_hex IN (?, ?, ?, ?)
+           AND disabled = 0 AND (expires_at IS NULL OR expires_at > ?)`
       )
-        .bind(hash, nowIso)
+        .bind(...hashes, nowIso)
         .first<{ id: string }>();
     } catch (e) {
       const msg = String(e);
