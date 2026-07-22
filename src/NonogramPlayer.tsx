@@ -4,7 +4,7 @@ import type { CellState, Puzzle, Toast } from "./types";
 import { MAX_MOVES } from "../functions/lib/limits";
 
 function fmtTime(ms: number): string {
-  const s = Math.floor(ms / 1000);
+  const s = Math.floor(Math.max(0, ms) / 1000);
   const m = Math.floor(s / 60);
   return `${m}:${String(s % 60).padStart(2, "0")}`;
 }
@@ -126,9 +126,9 @@ export default function NonogramPlayer(props: {
     if (props.readonly || solved || !props.startedAt) return;
     const start = new Date(props.startedAt).getTime();
     startMs.current = start;
-    setElapsed(Date.now() - start);
+    setElapsed(Math.max(0, Date.now() - start));
     timerRef.current = window.setInterval(() => {
-      setElapsed(Date.now() - start);
+      setElapsed(Math.max(0, Date.now() - start));
     }, 200);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
