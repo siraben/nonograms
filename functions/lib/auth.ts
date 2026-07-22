@@ -4,6 +4,7 @@ export type Env = {
   DB: D1Database;
   BOOTSTRAP_TOKEN?: string;
   TURNSTILE_SECRET_KEY?: string;
+  TURNSTILE_DEV_BYPASS?: string;
   INVITES_REQUIRED?: string; // set to "0" to allow open registration
 };
 

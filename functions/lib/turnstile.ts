@@ -11,10 +11,12 @@ export async function verifyTurnstile(opts: {
   secretKey: string | undefined;
   token: string | undefined;
   remoteip?: string | null;
+  allowDevBypass?: boolean;
 }): Promise<{ ok: boolean; reason?: string }> {
   if (!opts.secretKey) {
-    // Allow dev without captcha configured.
-    return { ok: true };
+    return opts.allowDevBypass
+      ? { ok: true }
+      : { ok: false, reason: "captcha server not configured" };
   }
   if (!opts.token) return { ok: false, reason: "missing captcha token" };
 
@@ -33,4 +35,3 @@ export async function verifyTurnstile(opts: {
   if (!data.success) return { ok: false, reason: (data["error-codes"] || ["captcha failed"]).join(", ") };
   return { ok: true };
 }
-

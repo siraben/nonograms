@@ -28,11 +28,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const limit = await checkLoginRateLimit(env.DB, remoteIp, username);
   if (limit.blocked) return err(429, "too many login attempts; try again later");
   if (limit.captchaRequired) {
+    const allowDevBypass = env.TURNSTILE_DEV_BYPASS === "1";
+    if (!env.TURNSTILE_SECRET_KEY && !allowDevBypass) {
+      return err(503, "captcha server not configured");
+    }
     if (!body.captchaToken) return err(429, "captcha required");
     const captcha = await verifyTurnstile({
       secretKey: env.TURNSTILE_SECRET_KEY,
       token: body.captchaToken,
       remoteip: remoteIp,
+      allowDevBypass,
     });
     if (!captcha.ok) return err(429, `captcha: ${captcha.reason || "failed"}`);
   }
