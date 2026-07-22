@@ -87,21 +87,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
       )
     );
   }
-
-  const results = await env.DB.batch(stmts);
-  const inserted = results
-    .reduce((count, result) => count + (result.meta?.changes || 0), 0);
-  if (inserted < sorted.length) {
-    const abandoned = await env.DB.prepare(
+  stmts.push(
+    env.DB.prepare(
       `UPDATE attempts SET completed = 1, eligible = 0
        WHERE id = ? AND user_id = ? AND completed = 0
          AND (SELECT COUNT(*) FROM attempt_moves WHERE attempt_id = ?) >= ?`
-    ).bind(attemptId, authed.userId, attemptId, MAX_MOVES).run();
-    if ((abandoned.meta?.changes || 0) !== 1 && inserted === 0) {
-      return err(409, "attempt is no longer writable");
-    }
+    ).bind(attemptId, authed.userId, attemptId, MAX_MOVES)
+  );
+
+  const results = await env.DB.batch(stmts);
+  const inserted = results.slice(0, sorted.length)
+    .reduce((count, result) => count + (result.meta?.changes || 0), 0);
+  const abandoned = (results[sorted.length]?.meta?.changes || 0) === 1;
+  if (abandoned) {
     return json({ ok: true, abandoned: true, moveCount: MAX_MOVES });
   }
+  if (inserted === 0) return err(409, "attempt is no longer writable");
 
   return json({ ok: true });
 };
