@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Attempt, CellState, LeaderboardEntry, Puzzle, ReplayMove, Toast, User } from "./types";
 import { api } from "./api";
+import { ApiRequestError } from "./api";
 import { computeKdePath } from "../lib/kde";
 import * as Auth from "./auth";
 import NonogramPlayer from "./NonogramPlayer";
@@ -583,7 +584,7 @@ function PrivacyPolicy() {
 
         <p className="mt-12"><strong>What we don't store</strong></p>
         <ul>
-          <li>Your IP address is not stored in our database. During registration, it is passed to Cloudflare Turnstile for captcha verification but is not retained by us.</li>
+          <li>Your IP address is not stored directly. A one-way hash derived from it may be retained briefly to rate-limit login attempts, and it may be passed to Cloudflare Turnstile for captcha verification.</li>
           <li>No cookies are used for tracking. The only stored credential is a session token in localStorage.</li>
           <li>No analytics or third-party tracking scripts are loaded.</li>
         </ul>
@@ -616,9 +617,12 @@ function AuthCard(props: {
   const [submitting, setSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaReady, setCaptchaReady] = useState(false);
+  const [loginCaptchaRequired, setLoginCaptchaRequired] = useState(false);
+  const [captchaCycle, setCaptchaCycle] = useState(0);
 
   useEffect(() => {
-    if (props.mode !== "register") return;
+    const needsCaptcha = props.mode === "register" || loginCaptchaRequired;
+    if (!needsCaptcha) return;
     const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
     if (!siteKey) return;
 
@@ -657,7 +661,7 @@ function AuthCard(props: {
     return () => {
       cancelled = true;
     };
-  }, [props.mode]);
+  }, [props.mode, loginCaptchaRequired, captchaCycle]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -669,7 +673,7 @@ function AuthCard(props: {
     setSubmitting(true);
     try {
       if (props.mode === "login") {
-        await Auth.login(username, password, remember);
+        await Auth.login(username, password, remember, captchaToken || undefined);
       } else {
         const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
         if (siteKey && !captchaToken) throw new Error("Complete captcha first");
@@ -681,6 +685,19 @@ function AuthCard(props: {
       });
       props.onAuthed();
     } catch (err) {
+      const captchaChallenge =
+        props.mode === "login" &&
+        err instanceof ApiRequestError &&
+        err.status === 429 &&
+        err.message.includes("captcha");
+      if (captchaChallenge) {
+        setLoginCaptchaRequired(true);
+      }
+      if (props.mode === "login" && (loginCaptchaRequired || captchaChallenge)) {
+        setCaptchaToken("");
+        setCaptchaReady(false);
+        setCaptchaCycle((cycle) => cycle + 1);
+      }
       props.onToast({ kind: "bad", msg: (err as Error).message });
     } finally {
       setSubmitting(false);
@@ -708,7 +725,7 @@ function AuthCard(props: {
             autoComplete={props.mode === "login" ? "current-password" : "new-password"}
           />
         </div>
-        {props.mode === "register" && (
+        {(props.mode === "register" || loginCaptchaRequired) && (
           <div className="field">
             <label>Invite code (if required)</label>
             <input
@@ -743,7 +760,7 @@ function AuthCard(props: {
             className="btn primary"
             disabled={
               submitting ||
-              (props.mode === "register" &&
+              ((props.mode === "register" || loginCaptchaRequired) &&
                 Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) &&
                 !captchaReady)
             }
