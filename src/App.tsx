@@ -8,7 +8,7 @@ import NonogramPlayer from "./NonogramPlayer";
 import { getTurnstile } from "./turnstile";
 import { useOnline } from "./useOnline";
 import { genPuzzle } from "../functions/lib/puzzle";
-import { randomU32 } from "../functions/lib/rng";
+import { randomPuzzleSeed } from "../functions/lib/rng";
 import { Sun, Moon, CircleHelp, Share, Link, ChevronLeft, ChevronRight, SkipBack, Play as PlayIcon, Pause } from "lucide-react";
 import { Modal, Pagination, BackButton, CardHeader, LoadingState, EmptyState } from "./ui";
 
@@ -1111,7 +1111,7 @@ function OfflinePlay(props: {
 }) {
   const [key, setKey] = useState(0);
   const puzzle = useMemo(() => {
-    const seed = randomU32();
+    const seed = randomPuzzleSeed();
     const p = genPuzzle(props.size, props.size, seed);
     return { id: `offline-${seed}`, title: "", width: p.width, height: p.height, rowClues: p.rowClues, colClues: p.colClues };
   }, [props.size, key]);

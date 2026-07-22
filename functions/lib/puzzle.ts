@@ -1,5 +1,5 @@
 import { computeClues, countSolutions } from "./nonogram";
-import { XorShift32 } from "./rng";
+import { XorShift128, type PuzzleSeed } from "./rng";
 
 export function puzzleTitle(width: number, height: number, id: string): string {
   return `${width}x${height} ${id.slice(0, 8)}`;
@@ -8,11 +8,11 @@ export function puzzleTitle(width: number, height: number, id: string): string {
 export function genPuzzle(
   width: number,
   height: number,
-  seed: number,
+  seed: PuzzleSeed,
 ): {
   width: number;
   height: number;
-  seed: number;
+  seed: PuzzleSeed;
   solution: string;
   rowClues: number[][];
   colClues: number[][];
@@ -20,7 +20,7 @@ export function genPuzzle(
   const total = width * height;
   const minFilled = Math.floor(total * 0.18);
   const maxFilled = Math.floor(total * 0.82);
-  const rng = new XorShift32(seed);
+  const rng = new XorShift128(seed);
 
   // Goobix-like generator: 2-state Markov chain to create runs/clustering.
   //

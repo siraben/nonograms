@@ -2,7 +2,7 @@ import type { Env } from "../../lib/auth";
 import { requireUser } from "../../lib/auth";
 import { err, json, readJson } from "../../lib/http";
 import { genPuzzle } from "../../lib/puzzle";
-import { randomU32 } from "../../lib/rng";
+import { randomPuzzleSeed } from "../../lib/rng";
 
 type Body = { puzzleId?: string; size?: number };
 
@@ -33,7 +33,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     width = puzzleRow.width;
     height = puzzleRow.height;
   } else {
-    const seed = randomU32();
+    const seed = randomPuzzleSeed();
     const p = genPuzzle(size, size, seed);
     puzzleId = crypto.randomUUID();
     await env.DB.prepare(
