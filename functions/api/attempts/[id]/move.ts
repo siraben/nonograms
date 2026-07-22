@@ -37,42 +37,32 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   if (n <= 0) return err(500, "bad grid size");
   if (idx < 0 || idx >= n) return err(400, "bad idx");
 
-  // Check move limit
-  const seqRow = await env.DB.prepare(
-    "SELECT COALESCE(MAX(seq), 0) as maxSeq FROM attempt_moves WHERE attempt_id = ?"
-  ).bind(attemptId).first<{ maxSeq: number }>();
-  const maxSeq = seqRow?.maxSeq ?? 0;
-
-  if (maxSeq >= MAX_MOVES) {
-    await env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId).run();
-    return json({ ok: false, abandoned: true });
-  }
-
   const now = new Date();
   const startedAt = new Date(row.startedAt!);
   const atMs = now.getTime() - startedAt.getTime();
 
-  const isLastMove = maxSeq === MAX_MOVES - 1;
-
   const stmts: D1PreparedStatement[] = [
     env.DB.prepare(
       `INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at)
-       SELECT ?, ?, ?, ?, ?, ?
-       WHERE EXISTS (
-         SELECT 1 FROM attempts
-         WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0
-       )`
-    ).bind(attemptId, maxSeq + 1, atMs, idx, st, now.toISOString(), attemptId, authed.userId),
+       SELECT ?, COALESCE((SELECT MAX(seq) + 1 FROM attempt_moves WHERE attempt_id = ?), 1),
+              ?, ?, ?, ?
+       FROM attempts
+       WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0
+         AND (SELECT COUNT(*) FROM attempt_moves WHERE attempt_id = ?) < ?`
+    ).bind(attemptId, attemptId, atMs, idx, st, now.toISOString(), attemptId, authed.userId, attemptId, MAX_MOVES),
+    env.DB.prepare(
+      `UPDATE attempts SET completed = 1, eligible = 0
+       WHERE id = ? AND user_id = ? AND completed = 0
+         AND (SELECT COUNT(*) FROM attempt_moves WHERE attempt_id = ?) >= ?`
+    ).bind(attemptId, authed.userId, attemptId, MAX_MOVES),
   ];
 
-  if (isLastMove) {
-    stmts.push(env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId));
-  }
-
   const results = await env.DB.batch(stmts);
-  if ((results[0]?.meta?.changes || 0) !== 1) return err(409, "attempt is no longer writable");
+  const inserted = (results[0]?.meta?.changes || 0) === 1;
+  const abandoned = (results[1]?.meta?.changes || 0) === 1;
+  if (!inserted && !abandoned) return err(409, "attempt is no longer writable");
 
-  if (isLastMove) {
+  if (abandoned) {
     return json({ ok: true, abandoned: true, atMs });
   }
 

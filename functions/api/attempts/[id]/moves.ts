@@ -53,52 +53,38 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     .map((m) => ({ idx: m.idx | 0, state: m.state | 0, atMs: Math.max(0, m.atMs | 0) }))
     .sort((a, b) => a.atMs - b.atMs);
 
-  // Get current max seq once
-  const seqRow = await env.DB.prepare(
-    "SELECT COALESCE(MAX(seq), 0) as maxSeq FROM attempt_moves WHERE attempt_id = ?"
-  ).bind(attemptId).first<{ maxSeq: number }>();
-  let seq = seqRow?.maxSeq ?? 0;
-
-  // Enforce move limit
-  let abandoned = false;
-  let movesToInsert = sorted;
-  if (seq >= MAX_MOVES) {
-    // Already at limit — auto-abandon and accept no more moves
-    await env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId).run();
-    return json({ ok: true, abandoned: true, moveCount: MAX_MOVES });
-  }
-  if (seq + sorted.length > MAX_MOVES) {
-    // Truncate batch to fit within limit
-    movesToInsert = sorted.slice(0, MAX_MOVES - seq);
-    abandoned = true;
-  }
-
-  // Build batch: one insert per move (history only, state materialized on read)
+  // Each INSERT allocates its sequence in the same statement that writes the
+  // move. D1 executes the batch transactionally, so concurrent flushes cannot
+  // observe the same MAX(seq) or exceed the row cap.
   const stmts: D1PreparedStatement[] = [];
-  for (const m of movesToInsert) {
-    seq++;
+  for (const m of sorted) {
     stmts.push(
       env.DB.prepare(
         `INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at)
-         SELECT ?, ?, ?, ?, ?, ?
-         WHERE EXISTS (
-           SELECT 1 FROM attempts
-           WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0
-         )`
-      ).bind(attemptId, seq, m.atMs, m.idx, m.state, now, attemptId, authed.userId)
+         SELECT ?, COALESCE((SELECT MAX(seq) + 1 FROM attempt_moves WHERE attempt_id = ?), 1),
+                ?, ?, ?, ?
+         FROM attempts
+         WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0
+           AND (SELECT COUNT(*) FROM attempt_moves WHERE attempt_id = ?) < ?`
+      ).bind(
+        attemptId, attemptId, m.atMs, m.idx, m.state, now,
+        attemptId, authed.userId, attemptId, MAX_MOVES,
+      )
     );
   }
 
-  if (abandoned) {
-    stmts.push(env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId));
-  }
-
   const results = await env.DB.batch(stmts);
-  const inserted = results.slice(0, movesToInsert.length)
+  const inserted = results
     .reduce((count, result) => count + (result.meta?.changes || 0), 0);
-  if (movesToInsert.length > 0 && inserted === 0) return err(409, "attempt is no longer writable");
-
-  if (abandoned) {
+  if (inserted < sorted.length) {
+    const abandoned = await env.DB.prepare(
+      `UPDATE attempts SET completed = 1, eligible = 0
+       WHERE id = ? AND user_id = ? AND completed = 0
+         AND (SELECT COUNT(*) FROM attempt_moves WHERE attempt_id = ?) >= ?`
+    ).bind(attemptId, authed.userId, attemptId, MAX_MOVES).run();
+    if ((abandoned.meta?.changes || 0) !== 1 && inserted === 0) {
+      return err(409, "attempt is no longer writable");
+    }
     return json({ ok: true, abandoned: true, moveCount: MAX_MOVES });
   }
 
