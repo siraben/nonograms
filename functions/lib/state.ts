@@ -1,4 +1,4 @@
-/** Materialize grid state by replaying attempt_moves in at_ms order. */
+/** Materialize grid state using the same server-assigned order exposed by replays. */
 export async function materializeState(
   db: D1Database,
   attemptId: string,
@@ -6,7 +6,7 @@ export async function materializeState(
 ): Promise<number[]> {
   const rows = await db
     .prepare(
-      "SELECT idx, state FROM attempt_moves WHERE attempt_id = ? ORDER BY at_ms ASC, ROWID ASC"
+      "SELECT idx, state FROM attempt_moves WHERE attempt_id = ? ORDER BY seq ASC, id ASC"
     )
     .bind(attemptId)
     .all<{ idx: number; state: number }>();

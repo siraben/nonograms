@@ -22,7 +22,7 @@ export async function computeAndCacheKdePaths(db: D1Database, attempts: KdeCandi
       `SELECT attempt_id as attemptId, at_ms as atMs
        FROM attempt_moves
        WHERE attempt_id IN (${placeholders})
-       ORDER BY attempt_id ASC, at_ms ASC`
+       ORDER BY attempt_id ASC, seq ASC, id ASC`
     )
     .bind(...ids)
     .all<{ attemptId: string; atMs: number }>();
