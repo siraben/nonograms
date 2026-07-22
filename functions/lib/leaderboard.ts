@@ -80,7 +80,7 @@ export async function queryLeaderboard(db: D1Database, size: number | null, cuto
      WHERE a.completed = 1 AND a.eligible = 1 AND a.duration_ms IS NOT NULL
        AND (?1 IS NULL OR (p.width = ?1 AND p.height = ?1))
        AND (?2 IS NULL OR a.finished_at >= ?2)
-     ORDER BY a.duration_ms ASC
+     ORDER BY a.duration_ms ASC, a.finished_at ASC, a.id ASC
      LIMIT ?3`
   ).bind(size, cutoff, limit).all<LeaderboardDbRow>();
 
