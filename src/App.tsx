@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Attempt, CellState, LeaderboardEntry, Puzzle, ReplayMove, Toast, User } from "./types";
 import { api } from "./api";
+import { ApiRequestError } from "./api";
 import { computeKdePath } from "../lib/kde";
 import * as Auth from "./auth";
 import NonogramPlayer from "./NonogramPlayer";
 import { getTurnstile } from "./turnstile";
 import { useOnline } from "./useOnline";
 import { genPuzzle } from "../functions/lib/puzzle";
-import { randomU32 } from "../functions/lib/rng";
+import { randomPuzzleSeed } from "../functions/lib/rng";
 import { Sun, Moon, CircleHelp, Share, Link, ChevronLeft, ChevronRight, SkipBack, Play as PlayIcon, Pause } from "lucide-react";
 import { Modal, Pagination, BackButton, CardHeader, LoadingState, EmptyState } from "./ui";
 
@@ -256,6 +257,8 @@ export default function App() {
     (async () => {
       try {
         setUser(await Auth.me());
+      } catch {
+        setToast({ kind: "bad", msg: "Couldn't reach the server to restore your session" });
       } finally {
         setBusy(false);
       }
@@ -285,9 +288,13 @@ export default function App() {
   }, [busy, route, user, online]);
 
   async function doLogout() {
-    await Auth.logout();
-    setUser(null);
-    nav("/login");
+    try {
+      await Auth.logout();
+      setUser(null);
+      nav("/login");
+    } catch (err) {
+      setToast({ kind: "bad", msg: `Couldn't log out: ${(err as Error).message}` });
+    }
   }
 
   return (
@@ -577,14 +584,14 @@ function PrivacyPolicy() {
         <p><strong>What we store</strong></p>
         <ul>
           <li>Your username and a salted hash of your password (we never store your password in plain text)</li>
-          <li>Session tokens to keep you logged in</li>
+          <li>A one-way hash of your session token to keep you logged in</li>
           <li>Your puzzle attempts, moves, and solve times</li>
         </ul>
 
         <p className="mt-12"><strong>What we don't store</strong></p>
         <ul>
-          <li>Your IP address is not stored in our database. During registration, it is passed to Cloudflare Turnstile for captcha verification but is not retained by us.</li>
-          <li>No cookies are used for tracking. The only stored credential is a session token in localStorage.</li>
+          <li>Your IP address is not stored directly. A one-way hash derived from it may be retained briefly to rate-limit login attempts, and it may be passed to Cloudflare Turnstile for captcha verification.</li>
+          <li>No cookies are used for tracking. Authentication uses an HttpOnly session cookie.</li>
           <li>No analytics or third-party tracking scripts are loaded.</li>
         </ul>
 
@@ -616,21 +623,30 @@ function AuthCard(props: {
   const [submitting, setSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaReady, setCaptchaReady] = useState(false);
+  const [captchaLoadError, setCaptchaLoadError] = useState(false);
+  const [loginCaptchaRequired, setLoginCaptchaRequired] = useState(false);
+  const [captchaCycle, setCaptchaCycle] = useState(0);
 
   useEffect(() => {
-    if (props.mode !== "register") return;
+    const needsCaptcha = props.mode === "register" || loginCaptchaRequired;
+    if (!needsCaptcha) return;
     const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
     if (!siteKey) return;
 
     let cancelled = false;
     let widgetId: string | null = null;
+    const deadline = Date.now() + 5_000;
 
     const tryRender = () => {
       if (cancelled) return;
       const t = getTurnstile();
       const el = document.getElementById("turnstile");
       if (!t || !el) {
-        window.setTimeout(tryRender, 50);
+        if (Date.now() < deadline) {
+          window.setTimeout(tryRender, 50);
+        } else {
+          setCaptchaLoadError(true);
+        }
         return;
       }
       el.innerHTML = "";
@@ -652,12 +668,13 @@ function AuthCard(props: {
 
     setCaptchaToken("");
     setCaptchaReady(false);
+    setCaptchaLoadError(false);
     tryRender();
 
     return () => {
       cancelled = true;
     };
-  }, [props.mode]);
+  }, [props.mode, loginCaptchaRequired, captchaCycle]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -669,7 +686,7 @@ function AuthCard(props: {
     setSubmitting(true);
     try {
       if (props.mode === "login") {
-        await Auth.login(username, password, remember);
+        await Auth.login(username, password, remember, captchaToken || undefined);
       } else {
         const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
         if (siteKey && !captchaToken) throw new Error("Complete captcha first");
@@ -681,6 +698,19 @@ function AuthCard(props: {
       });
       props.onAuthed();
     } catch (err) {
+      const captchaChallenge =
+        props.mode === "login" &&
+        err instanceof ApiRequestError &&
+        err.status === 429 &&
+        err.message.includes("captcha");
+      if (captchaChallenge) {
+        setLoginCaptchaRequired(true);
+      }
+      if (props.mode === "login" && (loginCaptchaRequired || captchaChallenge)) {
+        setCaptchaToken("");
+        setCaptchaReady(false);
+        setCaptchaCycle((cycle) => cycle + 1);
+      }
       props.onToast({ kind: "bad", msg: (err as Error).message });
     } finally {
       setSubmitting(false);
@@ -708,7 +738,7 @@ function AuthCard(props: {
             autoComplete={props.mode === "login" ? "current-password" : "new-password"}
           />
         </div>
-        {props.mode === "register" && (
+        {(props.mode === "register" || loginCaptchaRequired) && (
           <div className="field">
             <label>Invite code (if required)</label>
             <input
@@ -728,6 +758,9 @@ function AuthCard(props: {
             </div>
           )
         )}
+        {captchaLoadError && (
+          <div className="hint gap-below">Captcha failed to load. Check your connection or content blocker, then reload.</div>
+        )}
         {props.mode === "login" && (
           <label className="row muted remember-field">
             <input
@@ -743,7 +776,7 @@ function AuthCard(props: {
             className="btn primary"
             disabled={
               submitting ||
-              (props.mode === "register" &&
+              ((props.mode === "register" || loginCaptchaRequired) &&
                 Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) &&
                 !captchaReady)
             }
@@ -878,6 +911,7 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
   const [leader15, setLeader15] = useState<LeaderboardEntry[]>([]);
   const [leader20, setLeader20] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leaderboardError, setLeaderboardError] = useState(false);
   const [period, setPeriod] = useState<Period>(() => {
     const saved = localStorage.getItem("leaderboard-period");
     return saved === "day" || saved === "week" || saved === "month" || saved === "all" ? saved : "day";
@@ -918,10 +952,14 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
         setLeader10(data.leaderboard10);
         setLeader15(data.leaderboard15);
         setLeader20(data.leaderboard20);
+        setLeaderboardError(false);
         setLoading(false);
         requestAnimationFrame(updateScrollHints);
       } catch {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLeaderboardError(true);
+          setLoading(false);
+        }
       }
     };
     setLoading(true);
@@ -1030,6 +1068,8 @@ function Home(props: { online: boolean; onToast: (t: Toast | null) => void }) {
               </CardHeader>
               {loading ? (
                 <LoadingState />
+              ) : leaderboardError ? (
+                <EmptyState>Leaderboard temporarily unavailable.</EmptyState>
               ) : entries.length === 0 ? (
                 <EmptyState>No runs yet. Be the first!</EmptyState>
               ) : (
@@ -1087,7 +1127,7 @@ function OfflinePlay(props: {
 }) {
   const [key, setKey] = useState(0);
   const puzzle = useMemo(() => {
-    const seed = randomU32();
+    const seed = randomPuzzleSeed();
     const p = genPuzzle(props.size, props.size, seed);
     return { id: `offline-${seed}`, title: "", width: p.width, height: p.height, rowClues: p.rowClues, colClues: p.colClues };
   }, [props.size, key]);
@@ -1185,23 +1225,6 @@ function Play(props: {
       nav("/");
     }
   }, [attempt?.completed, attempt?.finishedAt]);
-
-  // Abandon attempt on page unload (close tab, refresh, navigate away)
-  useEffect(() => {
-    if (!attempt?.startedAt || attempt.completed) return;
-    const url = `/api/attempts/${encodeURIComponent(props.attemptId)}/abandon`;
-    const onUnload = () => navigator.sendBeacon(url);
-    window.addEventListener("beforeunload", onUnload);
-    return () => window.removeEventListener("beforeunload", onUnload);
-  }, [props.attemptId, attempt?.startedAt, attempt?.completed]);
-
-  // Abandon attempt on SPA navigation away from play route
-  useEffect(() => {
-    if (!attempt?.startedAt || attempt.completed) return;
-    return () => {
-      navigator.sendBeacon(`/api/attempts/${encodeURIComponent(props.attemptId)}/abandon`);
-    };
-  }, [props.attemptId, attempt?.startedAt, attempt?.completed]);
 
   const notStarted = attempt && !attempt.startedAt;
 
@@ -1506,6 +1529,18 @@ function Replay(props: {
     }
   }
 
+  async function acknowledgeReplay() {
+    try {
+      await api(`/api/replay/${encodeURIComponent(props.attemptId)}/view`, {
+        method: "POST",
+      });
+      setShowConfirmModal(false);
+      setConfirmed(true);
+    } catch (err) {
+      props.onToast({ kind: "bad", msg: (err as Error).message });
+    }
+  }
+
   if (checking) {
     return (
       <>
@@ -1523,7 +1558,7 @@ function Replay(props: {
             If you watch this replay, your times for this puzzle won't count for the leaderboard.
           </p>
           <div className="btn-group mt-12">
-            <button className="btn primary" onClick={() => { setShowConfirmModal(false); setConfirmed(true); }}>
+            <button className="btn primary" onClick={() => void acknowledgeReplay()}>
               Watch anyway
             </button>
             <button className="btn" onClick={() => { setShowConfirmModal(false); nav("/"); }}>

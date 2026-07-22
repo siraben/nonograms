@@ -7,6 +7,10 @@ export async function sha256Hex(input: string): Promise<string> {
   return out;
 }
 
+export function canonicalInviteCode(code: string): string {
+  return code.trim().toUpperCase().replace(/[\s-]+/g, "");
+}
+
 export function randomInviteCode(): string {
   // Human-ish, case-insensitive, avoids ambiguous chars.
   const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -16,4 +20,3 @@ export function randomInviteCode(): string {
   // xxxx-xxxx-xxxx-xxxx
   return out.replace(/(.{4})/g, "$1-").replace(/-$/, "");
 }
-

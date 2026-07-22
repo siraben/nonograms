@@ -6,8 +6,8 @@ export async function me(): Promise<User | null> {
   return r.user;
 }
 
-export async function login(username: string, password: string, remember: boolean) {
-  await api("/api/auth/login", { method: "POST", json: { username, password, remember } });
+export async function login(username: string, password: string, remember: boolean, captchaToken?: string) {
+  await api("/api/auth/login", { method: "POST", json: { username, password, remember, captchaToken } });
 }
 
 export async function register(

@@ -1,9 +1,9 @@
 import type { Env } from "../../lib/auth";
 import { createSession, destroySession } from "../../lib/auth";
-import { err, json, readJson } from "../../lib/http";
+import { err, isJsonObject, json, readJson } from "../../lib/http";
 import { hashPassword } from "../../lib/password";
 import { verifyTurnstile } from "../../lib/turnstile";
-import { sha256Hex } from "../../lib/crypto";
+import { canonicalInviteCode, sha256Hex } from "../../lib/crypto";
 
 type Body = { username: string; password: string; captchaToken?: string; inviteCode?: string };
 
@@ -12,21 +12,29 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   let body: Body;
   try {
-    body = await readJson<Body>(request);
+    body = await readJson<Body>(request, (value): value is Body =>
+      isJsonObject(value) &&
+      typeof value.username === "string" &&
+      typeof value.password === "string" &&
+      (value.captchaToken === undefined || typeof value.captchaToken === "string") &&
+      (value.inviteCode === undefined || typeof value.inviteCode === "string")
+    );
   } catch {
     return err(400, "bad json");
   }
 
-  // Enforce captcha if configured (recommended for production).
-  if (env.TURNSTILE_SECRET_KEY) {
-    const remoteip = request.headers.get("CF-Connecting-IP");
-    const cap = await verifyTurnstile({
-      secretKey: env.TURNSTILE_SECRET_KEY,
-      token: body.captchaToken,
-      remoteip
-    });
-    if (!cap.ok) return err(403, `captcha: ${cap.reason || "failed"}`);
+  const allowDevBypass = env.TURNSTILE_DEV_BYPASS === "1";
+  if (!env.TURNSTILE_SECRET_KEY && !allowDevBypass) {
+    return err(503, "captcha server not configured");
   }
+  const remoteip = request.headers.get("CF-Connecting-IP");
+  const cap = await verifyTurnstile({
+    secretKey: env.TURNSTILE_SECRET_KEY,
+    token: body.captchaToken,
+    remoteip,
+    allowDevBypass,
+  });
+  if (!cap.ok) return err(403, `captcha: ${cap.reason || "failed"}`);
 
   const username = (body.username || "").trim().toLowerCase();
   const password = body.password || "";
@@ -38,20 +46,32 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   if (exists) return err(409, "username taken");
 
   // Enforce invite codes by default (friends-only). Set INVITES_REQUIRED=0 to allow open registration.
-  // Validate + consume invite code after username check to avoid wasting codes on duplicate usernames.
+  // Validate the invite after the username check. A database trigger consumes it
+  // in the same statement as the user INSERT, so any INSERT failure rolls back use.
   let inviteCodeId: string | null = null;
   if (env.INVITES_REQUIRED !== "0") {
-    const code = (body.inviteCode || "").trim();
+    const rawCode = (body.inviteCode || "").trim();
+    const code = canonicalInviteCode(rawCode);
     if (!code) return err(403, "invite code required");
 
-    const hash = await sha256Hex(code);
+    // Include legacy spellings so codes created before canonicalization continue
+    // to redeem when users vary case or omit the generated hyphens.
+    const grouped = code.replace(/(.{4})/g, "$1-").replace(/-$/, "");
+    const hashes = await Promise.all([
+      sha256Hex(code),
+      sha256Hex(rawCode),
+      sha256Hex(rawCode.toUpperCase()),
+      sha256Hex(grouped),
+    ]);
     const nowIso = new Date().toISOString();
     let found: { id: string } | null = null;
     try {
       found = await env.DB.prepare(
-        "SELECT id FROM invite_codes WHERE code_hash_hex = ? AND disabled = 0 AND (expires_at IS NULL OR expires_at > ?)"
+        `SELECT id FROM invite_codes
+         WHERE code_hash_hex IN (?, ?, ?, ?)
+           AND disabled = 0 AND (expires_at IS NULL OR expires_at > ?)`
       )
-        .bind(hash, nowIso)
+        .bind(...hashes, nowIso)
         .first<{ id: string }>();
     } catch (e) {
       const msg = String(e);
@@ -62,13 +82,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     }
     if (!found) return err(403, "invalid invite code");
 
-    // Atomic-ish consume: guard max_uses inside the update.
-    const upd = await env.DB.prepare(
-      "UPDATE invite_codes SET uses = uses + 1 WHERE id = ? AND disabled = 0 AND (expires_at IS NULL OR expires_at > ?) AND (max_uses IS NULL OR uses < max_uses)"
-    )
-      .bind(found.id, nowIso)
-      .run();
-    if ((upd.meta?.changes || 0) !== 1) return err(403, "invite code exhausted");
     inviteCodeId = found.id;
   }
 
@@ -84,6 +97,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
       .run();
   } catch (e) {
     const msg = String(e);
+    if (msg.includes("invite code exhausted")) return err(403, "invite code exhausted");
     if (msg.includes("UNIQUE") || msg.includes("unique")) return err(409, "username taken");
     throw e;
   }

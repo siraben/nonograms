@@ -1,5 +1,5 @@
-import { computeClues } from "./nonogram";
-import { XorShift32 } from "./rng";
+import { computeClues, countSolutions } from "./nonogram";
+import { XorShift128, type PuzzleSeed } from "./rng";
 
 export function puzzleTitle(width: number, height: number, id: string): string {
   return `${width}x${height} ${id.slice(0, 8)}`;
@@ -8,11 +8,11 @@ export function puzzleTitle(width: number, height: number, id: string): string {
 export function genPuzzle(
   width: number,
   height: number,
-  seed: number,
+  seed: PuzzleSeed,
 ): {
   width: number;
   height: number;
-  seed: number;
+  seed: PuzzleSeed;
   solution: string;
   rowClues: number[][];
   colClues: number[][];
@@ -20,7 +20,7 @@ export function genPuzzle(
   const total = width * height;
   const minFilled = Math.floor(total * 0.18);
   const maxFilled = Math.floor(total * 0.82);
-  const rng = new XorShift32(seed);
+  const rng = new XorShift128(seed);
 
   // Goobix-like generator: 2-state Markov chain to create runs/clustering.
   //
@@ -48,8 +48,8 @@ export function genPuzzle(
     }
   }
 
-  // Keep regenerating until it's not trivial (density bounds).
-  for (let tries = 0; tries < 50; tries++) {
+  // Keep regenerating until the clues describe exactly one solution.
+  for (let tries = 0; tries < 500; tries++) {
     const bits = new Uint8Array(total);
     fillGoobix(bits);
 
@@ -58,15 +58,10 @@ export function genPuzzle(
     if (ones < minFilled || ones > maxFilled) continue;
 
     const { rowClues, colClues } = computeClues(bits, width, height);
+    if (countSolutions(width, height, rowClues, colClues, 2) !== 1) continue;
     const sol = Array.from(bits, (b) => (b ? "1" : "0")).join("");
     return { width, height, seed, solution: sol, rowClues, colClues };
   }
 
-  // If we keep failing density bounds, still return a Goobix-style puzzle.
-  // The goal is to avoid a hard-coded deterministic pattern fallback.
-  const bits = new Uint8Array(total);
-  fillGoobix(bits);
-  const { rowClues, colClues } = computeClues(bits, width, height);
-  const sol = Array.from(bits, (b) => (b ? "1" : "0")).join("");
-  return { width, height, seed, solution: sol, rowClues, colClues };
+  throw new Error("could not generate a uniquely solvable puzzle");
 }

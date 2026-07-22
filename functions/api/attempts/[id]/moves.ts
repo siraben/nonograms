@@ -1,6 +1,6 @@
 import type { Env } from "../../../lib/auth";
 import { requireUser } from "../../../lib/auth";
-import { err, json, readJson } from "../../../lib/http";
+import { err, isJsonObject, json, readJson } from "../../../lib/http";
 import { MAX_MOVES } from "../../../lib/limits";
 
 type Move = { idx: number; state: number; atMs: number };
@@ -15,7 +15,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   const attemptId = String(params.id || "");
   let body: Body;
   try {
-    body = await readJson<Body>(request);
+    body = await readJson<Body>(request, (value): value is Body =>
+      isJsonObject(value) && Array.isArray(value.moves) && value.moves.every((move) =>
+        isJsonObject(move) &&
+        typeof move.idx === "number" && Number.isFinite(move.idx) &&
+        typeof move.state === "number" && Number.isFinite(move.state) &&
+        typeof move.atMs === "number" && Number.isFinite(move.atMs)
+      )
+    );
   } catch {
     return err(400, "bad json");
   }
@@ -46,53 +53,56 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     if (idx < 0 || idx >= n) return err(400, "bad idx");
   }
 
-  const now = new Date().toISOString();
+  const nowDate = new Date();
+  const now = nowDate.toISOString();
+  const elapsedOnServer = Math.max(0, nowDate.getTime() - new Date(row.startedAt).getTime());
+  const maxAtMs = elapsedOnServer + 5_000;
 
-  // Sort moves by atMs so seq numbers reflect chronological order.
-  const sorted = body.moves
-    .map((m) => ({ idx: m.idx | 0, state: m.state | 0, atMs: Math.max(0, m.atMs | 0) }))
-    .sort((a, b) => a.atMs - b.atMs);
+  // Preserve request order. Client time is display metadata only and is bounded
+  // by server elapsed time before SQL makes it monotonic with accepted moves.
+  const sorted = body.moves.map((m) => ({
+    idx: m.idx | 0,
+    state: m.state | 0,
+    atMs: Math.min(maxAtMs, Math.max(0, Math.floor(Number(m.atMs)))),
+  }));
 
-  // Get current max seq once
-  const seqRow = await env.DB.prepare(
-    "SELECT COALESCE(MAX(seq), 0) as maxSeq FROM attempt_moves WHERE attempt_id = ?"
-  ).bind(attemptId).first<{ maxSeq: number }>();
-  let seq = seqRow?.maxSeq ?? 0;
-
-  // Enforce move limit
-  let abandoned = false;
-  let movesToInsert = sorted;
-  if (seq >= MAX_MOVES) {
-    // Already at limit — auto-abandon and accept no more moves
-    await env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId).run();
-    return json({ ok: true, abandoned: true, moveCount: MAX_MOVES });
-  }
-  if (seq + sorted.length > MAX_MOVES) {
-    // Truncate batch to fit within limit
-    movesToInsert = sorted.slice(0, MAX_MOVES - seq);
-    abandoned = true;
-  }
-
-  // Build batch: one insert per move (history only, state materialized on read)
+  // Each INSERT allocates its sequence in the same statement that writes the
+  // move. D1 executes the batch transactionally, so concurrent flushes cannot
+  // observe the same MAX(seq) or exceed the row cap.
   const stmts: D1PreparedStatement[] = [];
-  for (const m of movesToInsert) {
-    seq++;
+  for (const m of sorted) {
     stmts.push(
       env.DB.prepare(
-        "INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-      ).bind(attemptId, seq, m.atMs, m.idx, m.state, now)
+         `INSERT INTO attempt_moves (attempt_id, seq, at_ms, idx, state, created_at)
+         SELECT ?, COALESCE((SELECT MAX(seq) + 1 FROM attempt_moves WHERE attempt_id = ?), 1),
+                MIN(?, MAX(?, COALESCE((
+                  SELECT at_ms FROM attempt_moves WHERE attempt_id = ? ORDER BY seq DESC LIMIT 1
+                ), 0))), ?, ?, ?
+         FROM attempts
+         WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0
+           AND (SELECT COUNT(*) FROM attempt_moves WHERE attempt_id = ?) < ?`
+      ).bind(
+        attemptId, attemptId, maxAtMs, m.atMs, attemptId, m.idx, m.state, now,
+        attemptId, authed.userId, attemptId, MAX_MOVES,
+      )
     );
   }
+  stmts.push(
+    env.DB.prepare(
+      `UPDATE attempts SET completed = 1, eligible = 0
+       WHERE id = ? AND user_id = ? AND completed = 0
+         AND (SELECT COUNT(*) FROM attempt_moves WHERE attempt_id = ?) >= ?`
+    ).bind(attemptId, authed.userId, attemptId, MAX_MOVES)
+  );
 
-  if (abandoned) {
-    stmts.push(env.DB.prepare("UPDATE attempts SET completed = 1, eligible = 0 WHERE id = ?").bind(attemptId));
-  }
-
-  await env.DB.batch(stmts);
-
+  const results = await env.DB.batch(stmts);
+  const inserted = results.slice(0, sorted.length)
+    .reduce((count, result) => count + (result.meta?.changes || 0), 0);
+  const abandoned = (results[sorted.length]?.meta?.changes || 0) === 1;
   if (abandoned) {
     return json({ ok: true, abandoned: true, moveCount: MAX_MOVES });
   }
+  if (inserted === 0) return err(409, "attempt is no longer writable");
 
   return json({ ok: true });
 };

@@ -1,9 +1,11 @@
 import { err, getCookie, setCookieHeader } from "./http";
+import { sha256Hex } from "./crypto";
 
 export type Env = {
   DB: D1Database;
   BOOTSTRAP_TOKEN?: string;
   TURNSTILE_SECRET_KEY?: string;
+  TURNSTILE_DEV_BYPASS?: string;
   INVITES_REQUIRED?: string; // set to "0" to allow open registration
 };
 
@@ -17,9 +19,14 @@ export function isHttps(req: Request): boolean {
   }
 }
 
-export async function getSession(env: Env, req: Request): Promise<Authed | null> {
+export async function sessionIdHash(req: Request): Promise<string | null> {
   const sid = getCookie(req, "sid");
-  if (!sid) return null;
+  return sid ? sha256Hex(sid) : null;
+}
+
+export async function getSession(env: Env, req: Request): Promise<Authed | null> {
+  const sidHash = await sessionIdHash(req);
+  if (!sidHash) return null;
 
   const now = new Date().toISOString();
   const row = await env.DB.prepare(
@@ -28,7 +35,7 @@ export async function getSession(env: Env, req: Request): Promise<Authed | null>
      JOIN users u ON u.id = s.user_id
      WHERE s.id = ? AND s.expires_at > ?`
   )
-    .bind(sid, now)
+    .bind(sidHash, now)
     .first<{ userId: string; username: string; isAdmin: number }>();
 
   if (!row) return null;
@@ -43,13 +50,14 @@ export async function requireUser(env: Env, req: Request): Promise<Authed | Resp
 
 export async function createSession(env: Env, req: Request, userId: string, remember: boolean): Promise<{ sid: string; setCookie: string }> {
   const sid = crypto.randomUUID();
+  const sidHash = await sha256Hex(sid);
 
   const now = new Date();
   const maxAgeSeconds = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 12;
   const expiresAt = new Date(now.getTime() + maxAgeSeconds * 1000);
 
   await env.DB.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)")
-    .bind(sid, userId, now.toISOString(), expiresAt.toISOString())
+    .bind(sidHash, userId, now.toISOString(), expiresAt.toISOString())
     .run();
 
   const setCookie = setCookieHeader({
@@ -66,9 +74,9 @@ export async function createSession(env: Env, req: Request, userId: string, reme
 }
 
 export async function destroySession(env: Env, req: Request): Promise<string> {
-  const sid = getCookie(req, "sid");
-  if (sid) {
-    await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(sid).run();
+  const sidHash = await sessionIdHash(req);
+  if (sidHash) {
+    await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(sidHash).run();
   }
   return setCookieHeader({
     name: "sid",

@@ -1,7 +1,7 @@
 import type { Env } from "../lib/auth";
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request, params }) => {
@@ -15,7 +15,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, params })
      FROM attempts a
      JOIN users u ON u.id = a.user_id
      JOIN puzzles p ON p.id = a.puzzle_id
-     WHERE a.id = ? AND a.completed = 1`
+     WHERE a.id = ? AND a.completed = 1 AND a.shared = 1`
   ).bind(attemptId).first<{
     durationMs: number | null;
     username: string;

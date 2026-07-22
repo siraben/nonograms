@@ -3,6 +3,7 @@ import { requireUser } from "../../../lib/auth";
 import { err, json } from "../../../lib/http";
 import { validateStateByClues } from "../../../lib/nonogram";
 import { materializeState } from "../../../lib/state";
+import { computeKdePath } from "../../../../lib/kde";
 
 export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }) => {
   const authed = await requireUser(env, request);
@@ -35,6 +36,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   if (a.completed === 1) return err(409, "attempt already finished");
   if (!a.startedAt) return err(409, "attempt not started");
 
+  const fence = await env.DB.prepare(
+    "UPDATE attempts SET finishing = 1 WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 0"
+  ).bind(attemptId, authed.userId).run();
+  if ((fence.meta?.changes || 0) !== 1) return err(409, "attempt is already finishing");
+
+  let completed = false;
+  try {
+
   const width = a.width | 0;
   const height = a.height | 0;
   const n = width * height;
@@ -54,19 +63,27 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
     return json({ solved: false, wrongRows: v.wrongRows, wrongCols: v.wrongCols });
   }
 
+  const moveTimes = await env.DB.prepare(
+    "SELECT at_ms as atMs FROM attempt_moves WHERE attempt_id = ? ORDER BY seq ASC, id ASC"
+  ).bind(attemptId).all<{ atMs: number }>();
+  const atMs = moveTimes.results.map((move) => move.atMs);
+  const kdePath = atMs.length >= 2 ? computeKdePath(atMs, durationMs) : "";
+
   // Compute eligibility atomically to avoid TOCTTOU race with concurrent replay views.
   const upd = await env.DB.prepare(
     `UPDATE attempts
-     SET completed = 1, finished_at = ?, duration_ms = ?,
+     SET completed = 1, finished_at = ?, duration_ms = ?, kde_path = ?,
+         finishing = 0,
          eligible = CASE WHEN eligible = 0 THEN 0
                          WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
                          THEN 0
                          WHEN EXISTS(SELECT 1 FROM attempts WHERE user_id = ? AND puzzle_id = ? AND id != ? AND started_at IS NOT NULL)
                          THEN 0 ELSE eligible END
-     WHERE id = ? AND completed = 0`
+     WHERE id = ? AND completed = 0 AND finishing = 1`
   ).bind(
     now.toISOString(),
     durationMs,
+    kdePath,
     authed.userId,
     a.puzzleId,
     authed.userId,
@@ -76,10 +93,18 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request, params }
   ).run();
 
   if ((upd.meta?.changes || 0) !== 1) return err(409, "attempt already finished");
+  completed = true;
 
   // Read back the final eligible value set by the atomic UPDATE.
   const final = await env.DB.prepare("SELECT eligible FROM attempts WHERE id = ?")
     .bind(attemptId).first<{ eligible: number }>();
 
   return json({ solved: true, durationMs, eligible: final?.eligible === 1 });
+  } finally {
+    if (!completed) {
+      await env.DB.prepare(
+        "UPDATE attempts SET finishing = 0 WHERE id = ? AND user_id = ? AND completed = 0 AND finishing = 1"
+      ).bind(attemptId, authed.userId).run();
+    }
+  }
 };

@@ -17,8 +17,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   // Abandon started attempts older than 4 hours; delete never-started ones older than 1 hour.
   const [abandoned, deleted] = await env.DB.batch([
     env.DB.prepare(
-      "UPDATE attempts SET completed = 1, eligible = 0 WHERE completed = 0 AND started_at IS NOT NULL AND started_at < ?"
-    ).bind(startedCutoff),
+      `UPDATE attempts SET completed = 1, eligible = 0
+       WHERE completed = 0 AND finishing = 0 AND started_at IS NOT NULL AND started_at < ?
+         AND COALESCE((
+           SELECT MAX(created_at) FROM attempt_moves WHERE attempt_id = attempts.id
+         ), started_at) < ?`
+    ).bind(startedCutoff, startedCutoff),
     env.DB.prepare(
       "DELETE FROM attempts WHERE completed = 0 AND started_at IS NULL AND created_at < ?"
     ).bind(unstartedCutoff),

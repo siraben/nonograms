@@ -1,8 +1,8 @@
 import type { Env } from "../../lib/auth";
 import { requireUser } from "../../lib/auth";
-import { err, json, readJson } from "../../lib/http";
+import { err, isJsonObject, json, readJson } from "../../lib/http";
 import { genPuzzle } from "../../lib/puzzle";
-import { randomU32 } from "../../lib/rng";
+import { randomPuzzleSeed } from "../../lib/rng";
 
 type Body = { puzzleId?: string; size?: number };
 
@@ -12,24 +12,18 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const authed = await requireUser(env, request);
   if (authed instanceof Response) return authed;
 
-  let body: Body = {};
+  let body: Body;
   try {
-    body = await readJson<Body>(request);
+    body = await readJson<Body>(request, (value): value is Body =>
+      isJsonObject(value) &&
+      (value.puzzleId === undefined || typeof value.puzzleId === "string") &&
+      (value.size === undefined || (typeof value.size === "number" && Number.isFinite(value.size)))
+    );
   } catch {
-    // ok: default
+    return err(400, "bad json");
   }
 
   const now = new Date().toISOString();
-
-  // Abandon stale in-progress attempts and clean up never-started ones in a single batch.
-  await env.DB.batch([
-    env.DB.prepare(
-      "UPDATE attempts SET completed = 1, eligible = 0 WHERE user_id = ? AND completed = 0 AND started_at IS NOT NULL"
-    ).bind(authed.userId),
-    env.DB.prepare(
-      "DELETE FROM attempts WHERE user_id = ? AND completed = 0 AND started_at IS NULL"
-    ).bind(authed.userId),
-  ]);
 
   let puzzleId = body.puzzleId;
 
@@ -43,7 +37,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     width = puzzleRow.width;
     height = puzzleRow.height;
   } else {
-    const seed = randomU32();
+    const seed = randomPuzzleSeed();
     const p = genPuzzle(size, size, seed);
     puzzleId = crypto.randomUUID();
     await env.DB.prepare(
@@ -57,16 +51,26 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
 
   const attemptId = crypto.randomUUID();
   // Compute eligibility atomically via subquery to avoid TOCTTOU race with concurrent replay views.
-  await env.DB.prepare(
-    `INSERT INTO attempts (id, puzzle_id, user_id, created_at, eligible, completed)
-     VALUES (?, ?, ?, ?,
-       CASE WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
-                 OR EXISTS(SELECT 1 FROM attempts WHERE user_id = ? AND puzzle_id = ? AND started_at IS NOT NULL)
-            THEN 0 ELSE 1 END,
-       0)`
-  )
-    .bind(attemptId, puzzleId, authed.userId, now, authed.userId, puzzleId, authed.userId, puzzleId)
-    .run();
+  // Insert the requested attempt first, then retire older attempts in the same
+  // transaction. Invalid puzzle IDs and failed inserts leave existing games alone.
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO attempts (id, puzzle_id, user_id, created_at, eligible, completed)
+       VALUES (?, ?, ?, ?,
+         CASE WHEN EXISTS(SELECT 1 FROM replay_views WHERE user_id = ? AND puzzle_id = ?)
+                   OR EXISTS(SELECT 1 FROM attempts WHERE user_id = ? AND puzzle_id = ? AND started_at IS NOT NULL)
+              THEN 0 ELSE 1 END,
+         0)`
+    ).bind(attemptId, puzzleId, authed.userId, now, authed.userId, puzzleId, authed.userId, puzzleId),
+    env.DB.prepare(
+      `UPDATE attempts SET completed = 1, eligible = 0
+       WHERE user_id = ? AND id != ? AND completed = 0 AND finishing = 0 AND started_at IS NOT NULL`
+    ).bind(authed.userId, attemptId),
+    env.DB.prepare(
+      `DELETE FROM attempts
+       WHERE user_id = ? AND id != ? AND completed = 0 AND started_at IS NULL`
+    ).bind(authed.userId, attemptId),
+  ]);
 
   const eligible = await env.DB.prepare("SELECT eligible FROM attempts WHERE id = ?")
     .bind(attemptId).first<{ eligible: number }>();

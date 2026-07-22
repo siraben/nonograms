@@ -30,7 +30,8 @@ npm install
 
 2. Configure local vars (optional):
 - Copy `.env.example` values into `.dev.vars` (this file is gitignored).
-- If you want captcha locally, set `VITE_TURNSTILE_SITE_KEY` in `.env` too (Vite reads `.env*`).
+- To run without captcha locally, set `TURNSTILE_DEV_BYPASS=1` in `.dev.vars`.
+- To exercise captcha locally, set both `TURNSTILE_SECRET_KEY` and `VITE_TURNSTILE_SITE_KEY` instead.
 
 3. Create a local D1 db and run migrations:
 ```sh
@@ -77,8 +78,8 @@ npx wrangler d1 migrations apply DB
 2. In Cloudflare Pages:
 - Set D1 binding `DB` to the database.
 - Add env vars:
-  - `TURNSTILE_SECRET_KEY` (required if you set `VITE_TURNSTILE_SITE_KEY`)
-  - `VITE_TURNSTILE_SITE_KEY` (optional; build-time)
+  - `TURNSTILE_SECRET_KEY` (required; registration fails closed without it)
+  - `VITE_TURNSTILE_SITE_KEY` (required in production so the UI can obtain a token; build-time)
   - `BOOTSTRAP_TOKEN` (secret; used once to make your account admin so you can manage invite codes)
   - `INVITES_REQUIRED` (optional; default is invite-only. Set to `0` to allow open registration.)
 
@@ -103,6 +104,9 @@ curl -sS -X POST 'https://<your-domain>/api/admin/bootstrap' \
   -b 'sid=<your session cookie>' \
   --data '{"token":"<BOOTSTRAP_TOKEN>"}'
 ```
+
+The bootstrap endpoint succeeds only while the database has no administrator. Remove
+`BOOTSTRAP_TOKEN` from the Pages environment immediately after the promotion.
 
 Then create invite codes (admin only):
 
