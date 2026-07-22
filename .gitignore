@@ -20,5 +20,9 @@ dist/
 # Analysis
 analysis.ipynb
 
+# Database exports and local copies (may contain credentials or personal data)
+nonogram-dump.sql
+nonogram-local.db
+
 # OS/editor
 .DS_Store
