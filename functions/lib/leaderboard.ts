@@ -15,10 +15,13 @@ type LeaderboardDbRow = Omit<LeaderboardRow, "kdePath"> & {
 
 /** Return midnight America/New_York as a UTC Date. */
 function etMidnight(year: number, month: number, day: number): Date {
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const normalized = new Date(Date.UTC(year, month, day));
+  const targetYear = normalized.getUTCFullYear();
+  const targetMonth = normalized.getUTCMonth();
+  const targetDay = normalized.getUTCDate();
   // Try EST (UTC-5) then EDT (UTC-4); check which gives midnight ET on the right date
   for (const offset of [5, 4]) {
-    const d = new Date(Date.UTC(year, month, day, offset));
+    const d = new Date(Date.UTC(targetYear, targetMonth, targetDay, offset));
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: "America/New_York",
       year: "numeric", month: "numeric", day: "numeric",
@@ -26,9 +29,11 @@ function etMidnight(year: number, month: number, day: number): Date {
     }).formatToParts(d);
     const h = parseInt(parts.find(p => p.type === "hour")!.value) % 24;
     const dd = parseInt(parts.find(p => p.type === "day")!.value);
-    if (h === 0 && dd === day) return d;
+    const mm = parseInt(parts.find(p => p.type === "month")!.value) - 1;
+    const yyyy = parseInt(parts.find(p => p.type === "year")!.value);
+    if (h === 0 && dd === targetDay && mm === targetMonth && yyyy === targetYear) return d;
   }
-  return new Date(Date.UTC(year, month, day, 5)); // fallback EST
+  return new Date(Date.UTC(targetYear, targetMonth, targetDay, 5)); // fallback EST
 }
 
 /** Get "now" as an ET local date. */
